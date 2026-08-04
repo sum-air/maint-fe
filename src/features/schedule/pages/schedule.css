@@ -1,0 +1,552 @@
+/* 스케줄 화면 — 클로드 디자인 "정비본부 월간 스케줄 (화면)" 기준 */
+
+/* ── 페이지 헤더 ── */
+.sched-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ECECF1;
+}
+
+.sched-titlewrap {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.sched-title {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+  white-space: nowrap;
+}
+
+.sched-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #5350E2;
+  color: #fff;
+  border-radius: 8px;
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(83, 80, 226, .3);
+}
+
+.sched-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+
+.sched-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.sched-stepbtn {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #8A8A98;
+  cursor: pointer;
+}
+
+.sched-stepbtn:hover {
+  background: #F4F4F8;
+}
+
+.sched-stepbtn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.sched-steplabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  white-space: nowrap;
+  color: #1F1F29;
+  cursor: pointer;
+}
+
+/* ── 월 선택 달력 팝오버 ── */
+.sched-cal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+}
+
+.sched-cal {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 196px;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  z-index: 70;
+  padding: 11px;
+}
+
+.sched-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sched-cal-nav {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #E5E5EC;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #6E6E80;
+  cursor: pointer;
+}
+
+.sched-cal-nav:hover {
+  background: #F8F8FC;
+}
+
+.sched-cal-nav svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.sched-cal-year {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sched-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.sched-cal-m {
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #363643;
+}
+
+.sched-cal-m:hover {
+  background: #F4F4F8;
+}
+
+.sched-cal-m.on {
+  background: #6868FF;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(104, 104, 255, .32);
+}
+
+.sched-tabs {
+  display: inline-flex;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 11px;
+  padding: 4px;
+  gap: 2px;
+  flex: none;
+}
+
+.sched-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  color: #6E6E80;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sched-tab:hover {
+  background: #F8F8FC;
+  color: #363643;
+}
+
+.sched-tab.on {
+  color: #fff;
+  background: #6868FF;
+  box-shadow: 0 3px 10px rgba(104, 104, 255, .3);
+}
+
+.sched-tab.on:hover {
+  background: #5350E2;
+  color: #fff;
+}
+
+.sched-tab svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sched-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #A6A6B4;
+  text-align: right;
+}
+
+.sched-coming {
+  margin-top: 18px;
+  padding: 60px 0;
+  text-align: center;
+  color: #9C9CAB;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid #DFDFE7;
+  border-radius: 8px;
+}
+
+/* ── 월간 히트맵 표 ── */
+.hm {
+  margin-top: 0;
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #DFDFE7;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.hm-row {
+  display: flex;
+  align-items: center;
+}
+
+.hm-corner {
+  width: 140px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  background: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  color: #6E6E80;
+  box-shadow: inset -1px -1px 0 #E4E4EC;
+}
+
+.hm-day {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: inset -1px -1px 0 #E4E4EC;
+}
+
+.hm-teamband {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  background: #FAFAFE;
+  border-top: 1px solid #E4E4EC;
+  border-bottom: 1px solid #E4E4EC;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hm-teamlabel {
+  width: 140px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hm-chevron {
+  font-size: 15px;
+  color: #8B87E8;
+  width: 12px;
+  flex: none;
+}
+
+.hm-teamname {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #433FBB;
+  white-space: nowrap;
+  flex: none;
+}
+
+.hm-teamcount {
+  font-size: 11px;
+  font-weight: 700;
+  color: #5350E2;
+  background: #fff;
+  border: 1px solid #DDDCFA;
+  border-radius: 99px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.hm-name {
+  width: 140px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  height: 38px;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 #E7E8EE, inset -1px 0 0 #E7E8EE;
+}
+
+.hm-cell {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  /* 엑셀처럼 칸마다 구분선 (오른쪽 + 아래) */
+  box-shadow: inset -1px -1px 0 #E4E4EC;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: transform .18s cubic-bezier(.22, .61, .36, 1), box-shadow .18s ease;
+}
+
+.hm-cell--code {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.hm-cell:hover {
+  transform: translateY(-4px) scale(1.12);
+  box-shadow: 0 0 0 1px rgba(21, 21, 29, .10), 0 10px 22px rgba(30, 110, 208, .28) !important;
+  z-index: 6;
+}
+
+/* ── 호버 팝오버 ── */
+.spop {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  z-index: 200;
+  width: 214px;
+  background: #fff;
+  border: 1px solid #E7E7EE;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(21, 21, 29, .18);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.spop-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  border-bottom: 1px solid rgba(21, 21, 29, .06);
+  padding: 12px 15px;
+}
+
+.spop-body {
+  padding: 12px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spop-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.spop-key {
+  font-size: 11.5px;
+  color: #9C9CAB;
+  font-weight: 600;
+}
+
+/* ── 근무코드 변경 모달 ── */
+.smodal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(24, 24, 32, .34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.smodal {
+  width: 300px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(21, 21, 29, .30);
+  overflow: hidden;
+}
+
+.smodal-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid #EEEEF3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.smodal-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #5350E2;
+  background: #EDECFB;
+  border-radius: 8px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+.smodal-body {
+  padding: 14px 16px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.smodal-grouplabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: #9C9CAB;
+  letter-spacing: .3px;
+  padding: 0 4px;
+}
+
+.smodal-foot {
+  padding: 12px 22px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.smodal-btn {
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+}
+
+.smodal-btn--cancel {
+  color: #5A5A68;
+  background: #F2F2F6;
+}
+
+.smodal-btn--save {
+  color: #fff;
+  background: #5350E2;
+}
+
+/* ── 근무 코드 안내 ── */
+.cg {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid #ECECF1;
+}
+
+.cg-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.cg-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+
+.cg-sub {
+  font-size: 12.5px;
+  color: #9C9CAB;
+  font-weight: 600;
+}
+
+.cg-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 30px 32px;
+}
+
+.cg-grouphead {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ECECEF;
+}
+
+.cg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 5px 8px;
+  margin: -5px -8px;
+  border-radius: 8px;
+}

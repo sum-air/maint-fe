@@ -1,17 +1,19 @@
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
 
-// 클로드 디자인 "섬에어 정비본부 페이지 디자인 > Sidebar.dc.html" 을 React 로 옮긴 것.
-// 평소엔 아이콘만 보이는 좁은 사이드바(76px), 마우스를 올리면 펼쳐진다(280px).
-// 메뉴는 README 의 확정 기능 5개 + 홈. 아이콘은 디자인의 스트로크 스타일을 따른다.
+// 공통 틀: 상단 헤더(로고 + 브레드크럼 + 사용자 영역) + 왼쪽 사이드바(메뉴) + 콘텐츠.
+// 사이드바는 평소 아이콘만(76px), 마우스를 올리면 펼쳐진다(216px).
+// 메뉴는 README 의 확정 기능 5개 + 홈. en 은 헤더 브레드크럼의 영문 섹션명.
 const MENUS = [
   {
     to: '/',
     label: '홈',
+    en: 'HOME',
     icon: <path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" />,
   },
   {
     to: '/flight-ops',
     label: '실시간 운항',
+    en: 'FLIGHT OPS',
     icon: (
       <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
     ),
@@ -19,6 +21,7 @@ const MENUS = [
   {
     to: '/duty-log',
     label: '업무일지',
+    en: 'DUTY LOG',
     icon: (
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5" />
     ),
@@ -26,11 +29,13 @@ const MENUS = [
   {
     to: '/schedule',
     label: '스케줄',
+    en: 'SCHEDULE',
     icon: <path d="M3 4h18v18H3zM3 9h18M8 2v4M16 2v4" />,
   },
   {
     to: '/overtime',
     label: '시간외근무',
+    en: 'OVERTIME',
     icon: (
       <path d="M6 2h12M6 22h12M8 2v4.5a4 4 0 0 0 1.6 3.2L12 12l-2.4 2.3A4 4 0 0 0 8 17.5V22M16 2v4.5a4 4 0 0 1-1.6 3.2L12 12l2.4 2.3a4 4 0 0 1 1.6 3.2V22" />
     ),
@@ -38,13 +43,68 @@ const MENUS = [
   {
     to: '/attendance',
     label: '출퇴근관리',
+    en: 'ATTENDANCE',
     icon: <path d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />,
   },
 ]
 
+// 로그인/알림 연동 전 임시 값
+const USER = { name: '김기홍', team: '섬에어 정비기획팀', initial: '김' }
+const ALARM_COUNT = 3
+
+function Header() {
+  // 현재 경로에 해당하는 메뉴를 찾아 브레드크럼에 표시
+  const { pathname } = useLocation()
+  const current =
+    MENUS.find((m) => (m.to === '/' ? pathname === '/' : pathname.startsWith(m.to))) ?? MENUS[0]
+
+  return (
+    <header className="hd">
+      <div className="hd__crumb">
+        <span className="hd__crumb-en">{current.en}</span>
+        <span className="hd__crumb-dot">·</span>
+        <span className="hd__crumb-ko">{current.label}</span>
+      </div>
+
+      <div className="hd__right">
+        <button type="button" className="hd__user">
+          <span className="hd__avatar">{USER.initial}</span>
+          <span className="hd__uinfo">
+            <span className="hd__uname">{USER.name}</span>
+            <span className="hd__uteam">{USER.team}</span>
+          </span>
+          <svg className="hd__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        <button type="button" className="hd__ibtn" aria-label="검색">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35" />
+          </svg>
+        </button>
+        <button type="button" className="hd__ibtn" aria-label="알림">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          {ALARM_COUNT > 0 && <span className="hd__badge">{ALARM_COUNT}</span>}
+        </button>
+        <button type="button" className="hd__ibtn" aria-label="더보기">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <circle cx="12" cy="5" r="1.6" />
+            <circle cx="12" cy="12" r="1.6" />
+            <circle cx="12" cy="19" r="1.6" />
+          </svg>
+        </button>
+      </div>
+    </header>
+  )
+}
+
 function Layout() {
   return (
     <div className="layout">
+      <Header />
       <aside className="sb">
         <div className="brand">
           <div className="bmark">
@@ -69,7 +129,6 @@ function Layout() {
             <span className="b">정비본부</span>
           </div>
         </div>
-
         <nav className="nav">
           {MENUS.map((menu) => (
             <NavLink key={menu.to} to={menu.to} end={menu.to === '/'} className="ni">

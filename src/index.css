@@ -18,6 +18,7 @@
   --red: #DE5151;
   --rail: 76px;
   --open: 216px;
+  --hd: 60px;
   --ease: cubic-bezier(.22, .61, .36, 1);
   --sh-tip: 0 8px 22px rgba(21, 21, 29, .16);
 }
@@ -30,7 +31,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #EDEDF2;
+  background: #fff;
   font-family: 'Pretendard Variable', 'Pretendard', -apple-system, sans-serif;
   color: var(--n900);
   -webkit-font-smoothing: antialiased;
@@ -40,7 +41,149 @@ body {
   min-height: 100vh;
 }
 
-/* 사이드바: 평소 아이콘만(76px), 호버 시 펼침(280px) */
+/* 상단 헤더: 사이드바 오른쪽부터 시작 — 브레드크럼 + 사용자 영역 + 아이콘 버튼 */
+.hd {
+  position: fixed;
+  top: 0;
+  left: var(--rail);
+  right: 0;
+  height: var(--hd);
+  background: var(--n0);
+  border-bottom: 1px solid var(--n100);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 0;
+  z-index: 60;
+}
+
+/* 브레드크럼: 영문 섹션명 · 한글 페이지명 */
+.hd__crumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 28px;
+}
+
+.hd__crumb-en {
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--n400);
+}
+
+.hd__crumb-dot {
+  color: var(--n400);
+}
+
+.hd__crumb-ko {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--n800);
+}
+
+.hd__right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hd__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  margin-right: 6px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.hd__user:hover {
+  background: var(--n50);
+}
+
+.hd__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--p50);
+  color: var(--p600);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hd__uinfo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.hd__uname {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--n800);
+}
+
+.hd__uteam {
+  font-size: 11.5px;
+  color: var(--n500);
+}
+
+.hd__chev {
+  width: 16px;
+  height: 16px;
+  color: var(--n400);
+  stroke-width: 2;
+}
+
+.hd__ibtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--n500);
+  cursor: pointer;
+}
+
+.hd__ibtn:hover {
+  background: var(--n50);
+  color: var(--n800);
+}
+
+.hd__ibtn svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
+
+.hd__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* 사이드바: 화면 왼쪽 전체 높이, 평소 아이콘만(76px), 호버 시 펼침(216px) */
 .sb {
   position: fixed;
   top: 0;
@@ -52,22 +195,17 @@ body {
   display: flex;
   flex-direction: column;
   transition: width .34s var(--ease), box-shadow .34s var(--ease);
-  z-index: 50;
+  z-index: 70;
   overflow: hidden;
 }
 
-.sb:hover {
-  width: var(--open);
-  box-shadow: 8px 0 34px rgba(21, 21, 29, .12);
-}
-
-/* 브랜드 영역: 심볼은 항상, 워드마크 + 부서명은 펼쳤을 때만 */
+/* 브랜드 영역: 심볼은 항상, 워드마크 + 부서명은 펼쳤을 때만 (헤더와 같은 높이) */
 .brand {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 0 15px;
-  height: 58px;
+  height: var(--hd);
   flex: none;
   border-bottom: 1px solid var(--line);
   overflow: hidden;
@@ -128,10 +266,15 @@ body {
   border-left: 1px solid var(--n200);
 }
 
+.sb:hover {
+  width: var(--open);
+  box-shadow: 8px 0 34px rgba(21, 21, 29, .12);
+}
+
 /* 메뉴 */
 .nav {
   flex: 1;
-  padding: 8px 0;
+  padding: 12px 14px;
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -140,20 +283,22 @@ body {
   width: 0;
 }
 
-/* 메뉴 행: 사이드바 전체 폭을 채우는 플랫한 블록 */
+/* 메뉴 행: 둥근 사각형, 접힌 상태에선 아이콘 주변만 강조됨 */
 .ni {
   display: flex;
   align-items: center;
   height: 48px;
+  border-radius: 12px;
   color: var(--n500);
   cursor: pointer;
   position: relative;
+  margin-bottom: 4px;
   transition: background .15s, color .15s;
   text-decoration: none;
 }
 
 .ni .ico {
-  width: var(--rail);
+  width: 48px;
   flex: none;
   display: grid;
   place-items: center;
@@ -186,24 +331,37 @@ body {
   color: var(--n800);
 }
 
-/* 현재 화면 메뉴: 행 전체가 진한 블록으로 채워짐 (NavLink 가 .active 를 자동으로 붙여줌) */
+/* 현재 화면 메뉴: 연보라 둥근 사각형 + 사이드바 왼쪽 끝 인디케이터 바
+   (NavLink 가 .active 를 자동으로 붙여줌) */
 .ni.active {
-  background: var(--p500);
-  color: #fff;
+  background: var(--p50);
+  color: var(--p700);
 }
 
 .ni.active .ico svg {
-  color: #fff;
+  color: var(--p600);
 }
 
 .ni.active .nt {
   font-weight: 700;
 }
 
+.ni.active::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--p500);
+  border-radius: 0 3px 3px 0;
+}
+
 /* 접힌 상태에서 메뉴에 호버하면 뜨는 툴팁 */
 .ni .tip {
   position: absolute;
-  left: 84px;
+  left: 64px;
   top: 50%;
   transform: translateY(-50%) translateX(-4px);
   background: var(--n900);
@@ -237,8 +395,9 @@ body {
   transform: translateY(-50%) translateX(0);
 }
 
-/* 콘텐츠 영역: 사이드바 rail 폭만큼 밀어둔다 (펼침은 위로 덮음) */
+/* 콘텐츠 영역: 헤더 높이 + 사이드바 rail 폭만큼 밀어둔다 (펼침은 위로 덮음) */
 .layout__main {
+  margin-top: var(--hd);
   margin-left: var(--rail);
   padding: 1.75rem 2rem;
 }

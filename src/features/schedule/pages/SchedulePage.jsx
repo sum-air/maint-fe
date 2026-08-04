@@ -2,6 +2,7 @@ import { useState } from 'react'
 import MonthHeatmap from '../components/MonthHeatmap.jsx'
 import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
+import StatsView from '../components/StatsView.jsx'
 import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../utils.js'
 import './schedule.css'
 
@@ -163,12 +164,15 @@ function SchedulePage() {
         </div>
       )}
 
-      {/* 일간/통계 뷰는 추후 구현 */}
-      {view !== 'month' && (
-        <div className="sched-coming">
-          {view === 'daily' ? '일간 스케줄' : '통계'} 화면은 준비 중입니다.
+      {/* 통계 뷰 */}
+      {view === 'stats' && (
+        <div style={{ marginTop: 18 }}>
+          <StatsView />
         </div>
       )}
+
+      {/* 일간 뷰는 추후 구현 */}
+      {view === 'daily' && <div className="sched-coming">일간 스케줄 화면은 준비 중입니다.</div>}
 
       {/* 셀 호버 팝오버 */}
       {hover && (
@@ -207,8 +211,10 @@ function SchedulePage() {
         />
       )}
 
-      {/* 근무 코드 안내 */}
-      <CodeGuide hiCode={hiCode} onToggle={(c) => setHiCode((cur) => (cur === c ? null : c))} />
+      {/* 근무 코드 안내 — 월간 뷰에서만 표시 */}
+      {view === 'month' && (
+        <CodeGuide hiCode={hiCode} onToggle={(c) => setHiCode((cur) => (cur === c ? null : c))} />
+      )}
     </section>
   )
 }

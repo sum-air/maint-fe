@@ -14,18 +14,18 @@ src/
 │     ├─ pages/         #     라우트로 연결되는 페이지 컴포넌트
 │     ├─ components/    #     이 기능 전용 컴포넌트
 │     ├─ hooks/         #     이 기능 전용 훅
-│     ├─ api.js         #     supabase 등 데이터 쿼리 (필요 시 생성)
+│     ├─ api.js         #     백엔드 API 호출 (필요 시 생성)
 │     └─ utils.js       #     이 기능 전용 유틸 (필요 시 생성)
 ├─ shared/              # 여러 기능이 공유하는 것만
 │  ├─ components/       #   EmployeeAvatar, LoadingOverlay, Layout 등
 │  ├─ hooks/            #   useIsMobile, useAttendance 등
-│  ├─ lib/              #   supabase client, slack, constants 등
+│  ├─ lib/              #   api client, constants 등
 │  └─ styles/           #   tokens.css, 전역 css
 ├─ main.jsx
 └─ index.css
-
-api/                    # Vercel 서버리스 함수
 ```
+
+데이터는 별도 백엔드 서버의 API 를 호출해서 가져온다 (Vercel 서버리스/Supabase 미사용).
 
 ### 계획된 기능 폴더
 

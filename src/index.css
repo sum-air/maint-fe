@@ -7,35 +7,56 @@
 body {
   margin: 0;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
 }
 
-.app {
-  text-align: center;
-  padding: 2rem;
-}
-
-.app h1 {
-  margin-bottom: 0.5rem;
-}
-
-.app button {
-  margin-top: 1rem;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  border: 1px solid #d0d0d5;
-  border-radius: 8px;
+/* 공통 레이아웃: 상단바 + 콘텐츠 영역 */
+.layout__header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0 1.25rem;
+  height: 3.25rem;
   background: #fff;
-  cursor: pointer;
+  border-bottom: 1px solid #e3e3e8;
 }
 
-.app button:hover {
-  border-color: #4a7dff;
+.layout__logo {
+  font-weight: 700;
+  font-size: 1.05rem;
 }
 
-.app .hint {
-  margin-top: 2rem;
-  color: #888;
-  font-size: 0.9rem;
+.layout__nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.layout__nav a {
+  color: #555;
+  text-decoration: none;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.2rem;
+}
+
+.layout__nav a:hover {
+  color: #1a1a1a;
+}
+
+/* 현재 화면에 해당하는 메뉴 강조 (NavLink 가 자동으로 붙여줌) */
+.layout__nav a.active {
+  color: #2f5fd0;
+  font-weight: 600;
+}
+
+.layout__main {
+  padding: 1.5rem 1.25rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.home h1 {
+  margin: 0 0 0.5rem;
+}
+
+.home p {
+  color: #666;
 }

@@ -3,6 +3,7 @@ import MonthHeatmap from '../components/MonthHeatmap.jsx'
 import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
 import StatsView from '../components/StatsView.jsx'
+import DailyView from '../components/DailyView.jsx'
 import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../utils.js'
 import './schedule.css'
 
@@ -14,8 +15,9 @@ const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 function SchedulePage() {
   const [view, setView] = useState('month') // month | daily | stats
   const [monthOffset, setMonthOffset] = useState(0)
-  const [calOpen, setCalOpen] = useState(false) // 월 선택 달력 팝오버
+  const [calOpen, setCalOpen] = useState(false) // 달력 팝오버 (월간=월 선택, 일간=날짜 선택)
   const [pickYear, setPickYear] = useState(BASE.year)
+  const [pickMonth, setPickMonth] = useState(BASE.month)
   const [collapsed, setCollapsed] = useState({})
   const [hover, setHover] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -24,12 +26,19 @@ function SchedulePage() {
   const [overrides, setOverrides] = useState({})
   const [hiCode, setHiCode] = useState(null)
 
+  const [selDay, setSelDay] = useState(9) // 일간 뷰에서 보는 날짜 (임시 데이터 기준일)
+
   const dt = new Date(BASE.year, BASE.month + monthOffset, 1)
   const year = dt.getFullYear()
   const month = dt.getMonth()
   const hasData = monthOffset === 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const day = Math.min(selDay, daysInMonth)
   const monthTitle = `${year}년 ${month + 1}월`
-  const stepLabel = `${year}.${String(month + 1).padStart(2, '0')}`
+  const stepLabel =
+    view === 'daily'
+      ? `${month + 1}월 ${day}일 (${WEEK[new Date(year, month, day).getDay()]})`
+      : `${year}.${String(month + 1).padStart(2, '0')}`
   const viewBadge = view === 'daily' ? '일간 스케줄' : view === 'stats' ? '통계 자료' : '월간 스케줄'
 
   // 셀 호버 팝오버 (디자인 showPop 로직)
@@ -63,8 +72,15 @@ function SchedulePage() {
     setEditing(null)
   }
 
-  const changeMonth = (delta) => {
-    setMonthOffset((o) => o + delta)
+  // ‹ › 이동: 월간/통계는 한 달, 일간은 하루 단위
+  const changeStep = (delta) => {
+    if (view === 'daily') {
+      const nd = new Date(year, month, day + delta)
+      setSelDay(nd.getDate())
+      setMonthOffset((nd.getFullYear() - BASE.year) * 12 + (nd.getMonth() - BASE.month))
+    } else {
+      setMonthOffset((o) => o + delta)
+    }
     setHover(null)
   }
 
@@ -78,48 +94,104 @@ function SchedulePage() {
         </div>
         <div className="sched-controls">
           <div className="sched-step">
-            <span className="sched-stepbtn" onClick={() => changeMonth(-1)}>
+            <span className="sched-stepbtn" onClick={() => changeStep(-1)}>
               <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
             </span>
             <span
               className="sched-steplabel"
-              onClick={() => { setPickYear(year); setCalOpen((v) => !v) }}
+              onClick={() => { setPickYear(year); setPickMonth(month); setCalOpen((v) => !v) }}
             >
               {stepLabel}
             </span>
-            <span className="sched-stepbtn" onClick={() => changeMonth(1)}>
+            <span className="sched-stepbtn" onClick={() => changeStep(1)}>
               <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
             </span>
 
-            {/* 월 선택 달력 팝오버 */}
+            {/* 달력 팝오버 — 월간/통계: 월 선택, 일간: 날짜 선택 */}
             {calOpen && (
               <>
                 <div className="sched-cal-overlay" onClick={() => setCalOpen(false)} />
-                <div className="sched-cal">
+                <div className="sched-cal" style={view === 'daily' ? { width: 232 } : undefined}>
                   <div className="sched-cal-head">
-                    <span className="sched-cal-nav" onClick={() => setPickYear((y) => y - 1)}>
+                    <span
+                      className="sched-cal-nav"
+                      onClick={() => {
+                        if (view === 'daily') {
+                          const nd = new Date(pickYear, pickMonth - 1, 1)
+                          setPickYear(nd.getFullYear())
+                          setPickMonth(nd.getMonth())
+                        } else setPickYear((y) => y - 1)
+                      }}
+                    >
                       <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
                     </span>
-                    <span className="sched-cal-year">{pickYear}년</span>
-                    <span className="sched-cal-nav" onClick={() => setPickYear((y) => y + 1)}>
+                    <span className="sched-cal-year">
+                      {view === 'daily' ? `${pickYear}년 ${pickMonth + 1}월` : `${pickYear}년`}
+                    </span>
+                    <span
+                      className="sched-cal-nav"
+                      onClick={() => {
+                        if (view === 'daily') {
+                          const nd = new Date(pickYear, pickMonth + 1, 1)
+                          setPickYear(nd.getFullYear())
+                          setPickMonth(nd.getMonth())
+                        } else setPickYear((y) => y + 1)
+                      }}
+                    >
                       <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
                     </span>
                   </div>
-                  <div className="sched-cal-grid">
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <span
-                        key={i}
-                        className={pickYear === year && i === month ? 'sched-cal-m on' : 'sched-cal-m'}
-                        onClick={() => {
-                          setMonthOffset((pickYear - BASE.year) * 12 + (i - BASE.month))
-                          setCalOpen(false)
-                          setHover(null)
-                        }}
-                      >
-                        {i + 1}월
-                      </span>
-                    ))}
-                  </div>
+
+                  {view === 'daily' ? (
+                    <>
+                      <div className="sched-cal-wk">
+                        {WEEK.map((w, i) => (
+                          <span key={w} style={{ color: i === 0 ? '#DE5151' : i === 6 ? '#3B7DE8' : '#A0A0AE' }}>{w}</span>
+                        ))}
+                      </div>
+                      <div className="sched-cal-days">
+                        {Array.from({ length: new Date(pickYear, pickMonth, 1).getDay() }, (_, i) => (
+                          <span key={`b${i}`} />
+                        ))}
+                        {Array.from({ length: new Date(pickYear, pickMonth + 1, 0).getDate() }, (_, i) => {
+                          const d = i + 1
+                          const wd = new Date(pickYear, pickMonth, d).getDay()
+                          const sel = pickYear === year && pickMonth === month && d === day
+                          return (
+                            <span
+                              key={d}
+                              className={sel ? 'sched-cal-d on' : 'sched-cal-d'}
+                              style={sel ? undefined : { color: wd === 0 ? '#DE5151' : wd === 6 ? '#3B7DE8' : '#363643' }}
+                              onClick={() => {
+                                setMonthOffset((pickYear - BASE.year) * 12 + (pickMonth - BASE.month))
+                                setSelDay(d)
+                                setCalOpen(false)
+                                setHover(null)
+                              }}
+                            >
+                              {d}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="sched-cal-grid">
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <span
+                          key={i}
+                          className={pickYear === year && i === month ? 'sched-cal-m on' : 'sched-cal-m'}
+                          onClick={() => {
+                            setMonthOffset((pickYear - BASE.year) * 12 + (i - BASE.month))
+                            setCalOpen(false)
+                            setHover(null)
+                          }}
+                        >
+                          {i + 1}월
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -171,8 +243,12 @@ function SchedulePage() {
         </div>
       )}
 
-      {/* 일간 뷰는 추후 구현 */}
-      {view === 'daily' && <div className="sched-coming">일간 스케줄 화면은 준비 중입니다.</div>}
+      {/* 일간 간트 타임라인 */}
+      {view === 'daily' && (
+        <div style={{ marginTop: 18 }}>
+          <DailyView year={year} month={month} day={day} hasData={hasData} overrides={overrides} />
+        </div>
+      )}
 
       {/* 셀 호버 팝오버 */}
       {hover && (

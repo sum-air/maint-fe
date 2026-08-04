@@ -27,11 +27,17 @@ src/
 
 데이터는 별도 백엔드 서버의 API 를 호출해서 가져온다 (Vercel 서버리스/Supabase 미사용).
 
-### 계획된 기능 폴더
+### 기능 목록 (총 5개)
 
-`duty-log` 외에 아래 기능들을 같은 모양으로 추가한다:
+| 폴더 | 기능 |
+|------|------|
+| `flight-ops` | 실시간 운항 |
+| `duty-log` | 업무일지 |
+| `schedule` | 스케줄 |
+| `overtime` | 시간외근무 |
+| `attendance` | 출퇴근관리 |
 
-`flight-ops` · `overtime` · `inventory` · `attendance` · `schedule` · `warranty` · `mh-analysis`
+이 외의 기능은 나중에 필요해지면 같은 모양으로 추가한다.
 
 ### 규칙
 

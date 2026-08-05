@@ -1,4 +1,4 @@
-import { CODE_GROUPS, CAT, PAL, MONO, TIMES, codeTime } from '../utils.js'
+import { CODE_GROUPS, CAT, PAL, MONO, TIMES, codeTime } from '../../../shared/lib/workCodes.js'
 
 // 하단 근무 코드 안내 범례. 코드를 클릭하면 히트맵에서 해당 코드만 강조된다.
 // 히트맵과 같은 문법: 색 칩 대신 코드 글자에만 색.

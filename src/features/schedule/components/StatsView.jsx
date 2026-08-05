@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MONO } from '../utils.js'
+import { MONO } from '../../../shared/lib/workCodes.js'
 
 // 월간 통계 히트맵 — 클로드 디자인 "정비본부 통계 (화면)" 포팅.
 // 인원 × 지표 표. 지표별로 정규화한 값을 초록 농도로 표현하고,

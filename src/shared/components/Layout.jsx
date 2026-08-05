@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router'
+import { CURRENT_USER as USER } from '../lib/currentUser.js'
 
 // 공통 틀: 상단 헤더(로고 + 브레드크럼 + 사용자 영역) + 왼쪽 사이드바(메뉴) + 콘텐츠.
 // 사이드바는 평소 아이콘만(76px), 마우스를 올리면 펼쳐진다(216px).
@@ -48,8 +49,7 @@ const MENUS = [
   },
 ]
 
-// 로그인/알림 연동 전 임시 값
-const USER = { name: '김기홍', team: '섬에어 정비기획팀', initial: '김' }
+// 알림 연동 전 임시 값 (사용자는 shared/lib/currentUser.js)
 const ALARM_COUNT = 3
 
 function Header() {

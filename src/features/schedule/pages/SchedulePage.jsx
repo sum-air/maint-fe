@@ -4,7 +4,7 @@ import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
 import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
-import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../utils.js'
+import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import './schedule.css'
 
 // 임시 데이터가 있는 기준 달 (백엔드 연동 전)

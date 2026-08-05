@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TEAMS, ROSTER, CODE_CAT, CAT, PAL, pickCode } from '../utils.js'
+import { TEAMS, ROSTER, CODE_CAT, CAT, PAL, pickCode } from '../../../shared/lib/workCodes.js'
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 const WEEKEND_BG = '#F7F7FC' // 주말 열 틴트

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TEAMS, ROSTER, CODE_CAT, CAT, BADGE, TIMES, MONO, pickCode } from '../utils.js'
+import { TEAMS, ROSTER, CODE_CAT, CAT, BADGE, TIMES, MONO, pickCode } from '../../../shared/lib/workCodes.js'
 
 // 일간 스케줄 간트 타임라인 — 클로드 디자인 "정비본부 일간 스케줄 (화면)" 포팅.
 // 왼쪽 고정 이름 열 + 가로 스크롤 24시간 트랙. 근무는 시작~종료 위치의 색 막대.

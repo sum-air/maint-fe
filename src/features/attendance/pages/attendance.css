@@ -1,0 +1,400 @@
+/* 출퇴근 관리 화면 — 클로드 디자인 "정비본부 출퇴근 관리 (화면)" 기준 */
+
+/* ── 페이지 헤더 ── */
+.att-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.att-title {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+  line-height: 1.05;
+}
+
+.att-daynav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.att-navbtn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6E6E80;
+}
+
+.att-navbtn:hover {
+  background: #F0F0F5;
+}
+
+.att-navbtn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.att-datelabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14.5px;
+  font-weight: 700;
+  min-width: 150px;
+  text-align: center;
+}
+
+.att-sel {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3A3A46;
+  background: #fff;
+  border: 1px solid #DCDCE4;
+  border-radius: 8px;
+  padding: 6px 26px 6px 11px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235350E2' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+
+/* 일간/주간/월간 범위 탭 */
+.att-scope {
+  margin-left: auto;
+  display: inline-flex;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.att-scopetab {
+  font-family: inherit;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  color: #8A8A98;
+}
+
+.att-scopetab:hover {
+  background: #F8F8FC;
+  color: #363643;
+}
+
+.att-scopetab.on {
+  background: #6868FF;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(104, 104, 255, .3);
+}
+
+/* ── 날짜 선택 팝오버 (스케줄 페이지와 같은 문법) ── */
+.att-cal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+}
+
+.att-cal {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 232px;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  z-index: 70;
+  padding: 11px;
+}
+
+.att-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.att-cal-nav {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #E5E5EC;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #6E6E80;
+  cursor: pointer;
+}
+
+.att-cal-nav:hover {
+  background: #F8F8FC;
+}
+
+.att-cal-nav svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.att-cal-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.att-cal-wk {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 3px;
+}
+
+.att-cal-wk span {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 0;
+}
+
+.att-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.att-cal-d {
+  height: 27px;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.att-cal-d:hover {
+  background: #F4F4F8;
+}
+
+.att-cal-d.on {
+  background: #6868FF;
+  color: #fff;
+}
+
+.att-cal-mgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.att-cal-m {
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #363643;
+}
+
+.att-cal-m:hover {
+  background: #F4F4F8;
+}
+
+.att-cal-m.on {
+  background: #6868FF;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(104, 104, 255, .32);
+}
+
+/* ── 표 카드 ── */
+.att-card {
+  border: 1px solid #E5E5EC;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(21, 21, 29, .04);
+  overflow: hidden;
+}
+
+.att-gridhead {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #FAFAFC;
+  border-bottom: 1px solid #F0F0F4;
+}
+
+.att-hh {
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #9C9CAB;
+  text-align: center;
+}
+
+.att-band {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #FAFAFE;
+  border-bottom: 1px solid #ECECF2;
+}
+
+.att-bandname {
+  font-size: 13px;
+  font-weight: 800;
+  color: #433FBB;
+}
+
+.att-cnt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 19px;
+  padding: 0 7px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid #DDDCFA;
+  font-size: 11px;
+  font-weight: 800;
+  color: #5350E2;
+}
+
+.att-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid #F4F4F7;
+}
+
+.att-row--click {
+  cursor: pointer;
+}
+
+.att-row--click:hover {
+  background: #FAFAFC;
+}
+
+.att-cell {
+  padding: 11px 14px;
+  text-align: center;
+}
+
+.att-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+/* 주 52시간 범례 */
+.att-legend {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #9C9CAB;
+}
+
+.att-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.att-legendbar {
+  width: 22px;
+  height: 6px;
+  border-radius: 99px;
+}
+
+/* ── 직원 상세 모달 ── */
+.att-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 21, 29, .42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.att-modal {
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+}
+
+.att-timecard {
+  background: #FAFAFC;
+  border: 1px solid #F0F0F4;
+  border-radius: 11px;
+  padding: 13px 15px;
+}
+
+.att-timecard-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #9C9CAB;
+}
+
+.att-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.att-btn--ghost {
+  border: 1px solid #E4E4EC;
+  background: #fff;
+  color: #4E4E5E;
+}
+
+.att-btn--ghost:hover {
+  background: #F8F8FC;
+}
+
+.att-btn--primary {
+  border: none;
+  background: #5350E2;
+  color: #fff;
+}
+
+.att-btn--primary:hover {
+  background: #433FBB;
+}

@@ -66,6 +66,16 @@ export function weekMeta(month, week) {
   return { nWeeks, wk, rangeLabel, start, end }
 }
 
+// "HH:MM" 출근/퇴근으로 총 근무시간 "H:MM" 계산 (야간 넘김 포함)
+export function calcDur(inT, outT) {
+  if (!inT || !outT) return '—'
+  const [ih, im] = inT.split(':').map(Number)
+  const [oh, om] = outT.split(':').map(Number)
+  let mins = oh * 60 + om - (ih * 60 + im)
+  if (mins < 0) mins += 24 * 60
+  return `${Math.floor(mins / 60)}:${pad(mins % 60)}`
+}
+
 // 특정 날짜가 그 달의 몇 주차인지 (월요일 시작)
 export function weekOfDate(month, d) {
   const first = new Date(YEAR, month - 1, 1)

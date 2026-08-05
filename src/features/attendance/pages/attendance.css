@@ -379,6 +379,15 @@
   cursor: pointer;
 }
 
+/* 컴팩트 버튼 (모달 우측 정렬용) */
+.att-btn--sm {
+  flex: none;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  border-radius: 9px;
+}
+
 .att-btn--ghost {
   border: 1px solid #E4E4EC;
   background: #fff;

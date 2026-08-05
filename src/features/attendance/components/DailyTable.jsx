@@ -1,5 +1,5 @@
 import { CAT, CODE_CAT, TIMES, MONO } from '../../../shared/lib/workCodes.js'
-import { STATUS, ATT_ROSTER, groupByTeam } from '../utils.js'
+import { STATUS, ATT_ROSTER, groupByTeam, calcDur } from '../utils.js'
 
 const SHORT = { m: '조기', d: '주간', t: '탑승', n: '야간', off: '휴무', ws: '대휴', lv: '연차' }
 const pad = (n) => String(n).padStart(2, '0')
@@ -23,8 +23,13 @@ export function decoRow(r) {
 }
 
 // 일간 출퇴근 표: 이름 · 근무코드 · 출근 · 퇴근 · 초과 · 총 근무 · 상태
-function DailyTable({ onOpen }) {
-  const teams = groupByTeam(ATT_ROSTER.map(decoRow))
+// edits: 모달에서 수정한 출퇴근 시각 { [이름]: { in, out } }
+function DailyTable({ onOpen, edits = {} }) {
+  const merged = ATT_ROSTER.map((r) => {
+    const e = edits[r.name]
+    return e ? { ...r, in: e.in, out: e.out, dur: calcDur(e.in, e.out) } : r
+  })
+  const teams = groupByTeam(merged.map(decoRow))
   return (
     <div className="att-card">
       <div className="att-gridhead">

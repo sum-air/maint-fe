@@ -22,6 +22,7 @@ function AttendancePage() {
   const [wWeek, setWWeek] = useState(4)
   const [mMonth, setMMonth] = useState(7)
   const [modal, setModal] = useState(null)
+  const [attEdits, setAttEdits] = useState({}) // 모달에서 수정한 출퇴근 시각 { [이름]: { in, out } }
   const [calOpen, setCalOpen] = useState(false) // 날짜 라벨 클릭 달력 팝오버
   const [pickM, setPickM] = useState(6) // 팝오버가 보여주는 달 (0-based)
 
@@ -197,12 +198,19 @@ function AttendancePage() {
 
       <div style={{ marginTop: 18 }}>
         {mode === 'my' && <MyAttendance />}
-        {mode === 'admin' && view === 'today' && <DailyTable onOpen={setModal} />}
+        {mode === 'admin' && view === 'today' && <DailyTable onOpen={setModal} edits={attEdits} />}
         {mode === 'admin' && view === 'week' && <PeriodTable mode="week" month={wMonth} week={wk} />}
         {mode === 'admin' && view === 'month' && <PeriodTable mode="month" month={mMonth} />}
       </div>
 
-      {modal && <DetailModal m={modal} dateLabel={dateLabel} onClose={() => setModal(null)} />}
+      {modal && (
+        <DetailModal
+          m={modal}
+          dateLabel={dateLabel}
+          onSave={(name, times) => setAttEdits((s) => ({ ...s, [name]: times }))}
+          onClose={() => setModal(null)}
+        />
+      )}
     </section>
   )
 }

@@ -1,21 +1,6 @@
 import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
-
-// 숫자만 입력하면 "HH:MM" 으로 자동 포맷 (0811 → 08:11)
-const formatTime = (raw) => {
-  const d = raw.replace(/\D/g, '').slice(0, 4)
-  return d.length <= 2 ? d : `${d.slice(0, 2)}:${d.slice(2)}`
-}
-
-// 저장 시 유효한 시각으로 정규화, 아니면 null
-const normalizeTime = (s) => {
-  if (!s) return ''
-  const m2 = s.match(/^(\d{1,2}):?(\d{2})$/)
-  if (!m2) return null
-  const h = Math.min(23, +m2[1])
-  const mm = Math.min(59, +m2[2])
-  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
-}
+import { formatTime, normalizeTime } from '../../../shared/lib/timeInput.js'
 
 // 일간 표에서 행 클릭 시 뜨는 직원 상세 모달 — 열리자마자 출근/퇴근 시각을 바로 수정할 수 있다.
 function DetailModal({ m, dateLabel, onSave, onClose }) {

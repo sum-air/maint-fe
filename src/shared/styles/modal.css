@@ -1,0 +1,50 @@
+/* 공용 모달 + 컴팩트 버튼 — 출퇴근/시간외근무 등 기능 공용 */
+
+.ui-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(21, 21, 29, .42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.ui-modal {
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+}
+
+.ui-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ui-btn--ghost {
+  border: 1px solid #E4E4EC;
+  background: #fff;
+  color: #4E4E5E;
+}
+
+.ui-btn--ghost:hover {
+  background: #F8F8FC;
+}
+
+.ui-btn--primary {
+  border: none;
+  background: #5350E2;
+  color: #fff;
+}
+
+.ui-btn--primary:hover {
+  background: #433FBB;
+}

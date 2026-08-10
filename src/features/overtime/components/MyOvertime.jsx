@@ -198,7 +198,10 @@ function MyOvertime() {
               <div className="ot-cell ot-mono">{dateWithDow(r.date)}</div>
               <div className="ot-cell ot-mono">{r.start} ~ {r.end ?? '—'}</div>
               <div className="ot-cell" style={{ fontSize: 13, fontWeight: 800, color: '#5350E2' }}>{r.end ? fmtHM(hoursBetween(r.start, r.end)) : '—'}</div>
-              <div className="ot-cell" style={{ fontSize: 13, fontWeight: 600, color: '#6E6E80' }}>{r.reason}</div>
+              <div className="ot-cell ot-reason" style={{ fontSize: 13, fontWeight: 600, color: '#6E6E80' }}>
+                <span className="ot-reason-clip">{r.reason}</span>
+                <span className="ot-tip">{r.reason}</span>
+              </div>
               <div className="ot-cell" style={{ display: 'flex', justifyContent: 'center' }}>
                 <span className="ot-pill" style={{ color: st.c, background: st.b }}>{st.label}</span>
               </div>

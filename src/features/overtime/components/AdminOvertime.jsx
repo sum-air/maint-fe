@@ -272,7 +272,10 @@ function AdminOvertime() {
                   <div className="ot-cell ot-mono">{dateWithDow(r.date)}</div>
                   <div className="ot-cell ot-mono">{r.start}~{r.end}</div>
                   <div className="ot-cell" style={{ fontSize: 12.5, fontWeight: 800, color: '#5350E2' }}>{fmtHM(r.hours)}</div>
-                  <div className="ot-cell" style={{ fontSize: 12.5, fontWeight: 600, color: '#6E6E80' }}>{r.reason}</div>
+                  <div className="ot-cell ot-reason" style={{ fontSize: 12.5, fontWeight: 600, color: '#6E6E80' }}>
+                    <span className="ot-reason-clip">{r.reason}</span>
+                    <span className="ot-tip">{r.reason}</span>
+                  </div>
                   <div className="ot-cell" style={{ display: 'flex', justifyContent: 'center', gap: 5 }}>
                     {r.status === 'wait' ? (
                       <>

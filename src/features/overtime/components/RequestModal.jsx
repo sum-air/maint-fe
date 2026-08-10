@@ -20,7 +20,7 @@ const myShiftEnd = (dateStr) => {
 
 const label = { fontSize: 11.5, fontWeight: 700, color: '#9C9CAB' }
 const underline = {
-  width: '100%', padding: '7px 0', border: 'none', borderBottom: '1.5px solid #E1E1E9',
+  width: '100%', height: 38, padding: 0, border: 'none', borderBottom: '1.5px solid #E1E1E9',
   textAlign: 'center', fontWeight: 800, fontFamily: 'inherit', outline: 'none',
   background: 'transparent', boxSizing: 'border-box',
 }

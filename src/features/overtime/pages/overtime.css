@@ -184,17 +184,17 @@
   background: linear-gradient(120deg, #433FBB, #6A5FE8);
 }
 
-/* 테이블 */
+/* 테이블 — 사유 툴팁이 밖으로 뜰 수 있게 overflow 는 visible, 모서리는 헤더에서 처리 */
 .ot-table {
   border: 1px solid #EAEAEF;
   border-radius: 12px;
-  overflow: hidden;
 }
 
 .ot-gridhead {
   display: grid;
   background: #F6F6FA;
   border-bottom: 1px solid #EAEAEF;
+  border-radius: 11px 11px 0 0;
 }
 
 .ot-hh {
@@ -246,6 +246,53 @@
   font-size: 13px;
   font-weight: 700;
   color: #3A3A46;
+}
+
+/* 사유 셀 — 칸 넘으면 말줄임(…) + 호버 시 다크 툴팁으로 전체 표시 */
+.ot-reason {
+  position: relative;
+  min-width: 0;
+}
+
+.ot-reason-clip {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ot-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  background: #2A2A38;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  padding: 9px 12px;
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(21, 21, 29, .25);
+  z-index: 80;
+  text-align: center;
+}
+
+.ot-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #2A2A38;
+}
+
+.ot-reason:hover .ot-tip {
+  display: block;
 }
 
 .ot-pill {

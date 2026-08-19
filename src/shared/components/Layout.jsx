@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { CURRENT_USER as USER } from '../lib/currentUser.js'
+import { CURRENT_USER as USER, applyMe } from '../lib/currentUser.js'
+import { fetchMe } from '../lib/employees.js'
 
 // 공통 틀: 상단 헤더(로고 + 브레드크럼 + 사용자 영역) + 왼쪽 사이드바(메뉴) + 콘텐츠.
 // 사이드바는 평소 아이콘만(76px), 마우스를 올리면 펼쳐진다(216px).
@@ -63,6 +64,20 @@ function Header() {
   const { pathname } = useLocation()
   const current =
     MENUS.find((m) => (m.to === '/' ? pathname === '/' : pathname.startsWith(m.to))) ?? MENUS[0]
+
+  // 내 정보 — atlas /employees/me (ERP 동기화 사본). 실패 시 currentUser.js 폴백 그대로.
+  const [, setMeLoaded] = useState(false)
+  useEffect(() => {
+    let alive = true
+    fetchMe()
+      .then((me) => {
+        if (!alive) return
+        applyMe(me)
+        setMeLoaded(true) // 리렌더 트리거 — 헤더·하위 화면이 실데이터를 다시 읽는다
+      })
+      .catch(() => {}) // 토큰 없음/백엔드 꺼짐 — 데모 폴백 유지
+    return () => { alive = false }
+  }, [])
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)

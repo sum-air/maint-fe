@@ -11,7 +11,11 @@ const BASE_URL = import.meta.env.VITE_ATLAS_BASE_URL ?? '/atlas'
 export const TOKEN_KEY = 'atlas.accessToken'
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_ATLAS_TOKEN ?? ''
+  const raw = localStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_ATLAS_TOKEN ?? ''
+  // 복사·붙여넣기로 섞여 들어오는 따옴표·"Bearer " 접두어·공백·개행 제거.
+  // 개행이 남으면 Safari 가 Authorization 헤더에서
+  // "The string did not match the expected pattern" 을 던지며 요청 자체가 실패한다.
+  return raw.trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').replace(/\s+/g, '')
 }
 
 /** 백엔드가 실패를 항상 { code, message } 로 준다. code 로 분기하고 message 는 보여주기만 한다. */

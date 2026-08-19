@@ -201,8 +201,10 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
     const cat = CODE_CAT[code]
     const off = cat === 'off'
     const dim = hiCode && code !== hiCode
+    const hit = hiCode && code === hiCode // 코드 안내에서 선택한 근무코드와 일치
     // 배경 없이 텍스트에만 색 (엑셀 스타일) — m/d/n/t 는 비비드, 나머지 분류는 뮤트 톤. 휴무는 옅은 회색.
     const color = off ? '#ADB2BF' : PAL[cat] ? PAL[cat][1] : CAT[cat].tx
+    const vivid = off ? '#8A8F9C' : PAL[cat] ? PAL[cat][1] : CAT[cat].dot
     // 긴급호출은 입력한 근무 시간을 괄호에 표시: EC(0) → EC(3)
     const label = code === 'EC(0)' && ecHours != null ? `EC(${ecHours})` : code
 
@@ -211,8 +213,9 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
         key={d}
         className="hm-cell hm-cell--code"
         style={{
-          background: weekend ? WEEKEND_BG : '#fff',
-          color,
+          // 하이라이트 매칭 셀은 분류색으로 채우고 흰 글자 — 흐려진 나머지와 확실히 대비
+          background: hit ? vivid : weekend ? WEEKEND_BG : '#fff',
+          color: hit ? '#fff' : color,
           fontSize: code.length >= 3 ? '11.5px' : '13px',
           letterSpacing: code.length >= 3 ? '-.6px' : '-.3px',
           opacity: dim ? 0.18 : 1,
@@ -220,8 +223,8 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
           boxShadow: cellShadow(p.pi, d, isSel),
         }}
         onMouseDown={(e) => startDrag(p.pi, d, e)}
-        onMouseEnter={(e) => { if (!dragOver(p.pi, d)) onCellHover({ p, code, off, ecHours }, e) }}
-        onMouseMove={(e) => { if (!dragRef.current) onCellHover({ p, code, off, ecHours }, e) }}
+        onMouseEnter={(e) => { if (!dragOver(p.pi, d)) onCellHover({ p, code, off, ecHours, d }, e) }}
+        onMouseMove={(e) => { if (!dragRef.current) onCellHover({ p, code, off, ecHours, d }, e) }}
         onMouseLeave={onCellLeave}
         onClick={(e) => handleSelect(p.pi, d, e)}
         onDoubleClick={() => onCellClick({ pi: p.pi, d, name: p.name, role: p.role, team: p.team, code, hours: ecHours })}
@@ -233,8 +236,8 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
 
   return (
     <div className="hm">
-      {/* 날짜 헤더 */}
-      <div className="hm-row">
+      {/* 날짜 헤더 — 스크롤 시 상단 고정 */}
+      <div className="hm-row hm-row--head">
         <span className="hm-corner">인원</span>
         {Array.from({ length: days }, (_, i) => {
           const d = i + 1

@@ -42,12 +42,14 @@ function SchedulePage() {
   const viewBadge = view === 'daily' ? '일간 스케줄' : view === 'stats' ? '통계 자료' : '월간 스케줄'
 
   // 셀 호버 팝오버 (디자인 showPop 로직)
-  const showPop = ({ p, code, off, ecHours }, e) => {
+  const showPop = ({ p, code, off, ecHours, d }, e) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = Math.min(Math.max(e.clientX, 130), window.innerWidth - 130)
     const cat = CODE_CAT[code]
+    const dow = '일월화수목금토'[new Date(year, month, d).getDay()]
     setHover({
       name: p.name, role: p.role, team: p.team,
+      dateLabel: `${month + 1}월 ${d}일(${dow})`,
       code: code === 'EC(0)' && ecHours != null ? `EC(${ecHours})` : code,
       time: off ? '휴무' : ecHours != null ? `${ecHours}시간` : codeTime(code),
       badgeBg: off ? '#B4B7C0' : BADGE[cat] ?? CAT[cat].dot,
@@ -256,6 +258,7 @@ function SchedulePage() {
           <div className="spop-head" style={{ background: hover.tint }}>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#1F1F29' }}>{hover.name}</span>
             <span style={{ fontSize: 12, fontWeight: 600, color: '#8A8A98' }}>{hover.role}</span>
+            <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 12, fontWeight: 800, color: '#55555F' }}>{hover.dateLabel}</span>
           </div>
           <div className="spop-body">
             <div className="spop-line">

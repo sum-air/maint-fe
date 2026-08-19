@@ -291,12 +291,22 @@
   background: #fff;
   border: 1px solid #DFDFE7;
   border-radius: 8px;
-  overflow: hidden;
+  /* overflow: hidden 금지 — 날짜 헤더의 position: sticky 가 무력화된다 */
 }
 
 .hm-row {
   display: flex;
   align-items: center;
+}
+
+/* 날짜 헤더 고정 — 스크롤해도 요일·날짜 행이 앱 헤더 바로 아래에 붙는다 */
+.hm-row--head {
+  position: sticky;
+  top: var(--hd);
+  z-index: 30;
+  background: #fff;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 1px 0 #E7E8EE;
 }
 
 .hm-corner {

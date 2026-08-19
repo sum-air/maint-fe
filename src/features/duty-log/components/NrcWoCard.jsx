@@ -221,7 +221,7 @@ function NrcWoCard() {
 
   return (
     <div className="dl-card">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 28, marginBottom: 10 }}>
         <span className="dl-ctitle">NRC · W/O</span>
         <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6, alignItems: 'center' }}>
           {FILTERS.map((f) => (

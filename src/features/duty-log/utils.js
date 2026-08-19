@@ -80,6 +80,27 @@ export const DEMO_LOGS = {
   ],
 }
 
+// 다른 사람 일지 데모 — 같은 (이름, 날짜)면 항상 같은 기록이 나온다.
+// 백엔드 연동 시 해당 인원의 일지 조회 API 로 교체한다.
+const OTHER_POOL = [
+  { s: '09:00', e: '09:30', gi: 6, c: '교육', t: '팀 아침 회의' },
+  { s: '09:30', e: '10:30', gi: 0, c: 'PR', t: '' },
+  { s: '10:30', e: '11:30', gi: 2, c: 'AMOS 입력', t: '검사 기록 입력' },
+  { s: '11:30', e: '12:00', gi: 4, c: '이동', t: '' },
+  { s: '13:00', e: '14:00', gi: 6, c: '식사', t: '' },
+  { s: '14:00', e: '15:30', gi: 0, c: 'W/O', t: 'W/O 작업 지원' },
+  { s: '15:30', e: '16:30', gi: 3, c: '공구관리', t: '' },
+  { s: '16:30', e: '17:30', gi: 2, c: '서류작성', t: '일일 정비 보고' },
+]
+
+export const demoLogsFor = (name, key) => {
+  let h = 0
+  for (const ch of name + key) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  const n = 2 + (h % 3)
+  const start = h % (OTHER_POOL.length - n + 1)
+  return OTHER_POOL.slice(start, start + n)
+}
+
 // NRC · W/O — 타입/상태 색 + 임시 데이터 (백엔드 연동 전 데모)
 export const AIRCRAFT_REGS = ['HL5264', 'HL5263']
 
@@ -99,16 +120,19 @@ export const DEMO_NRC_WO = [
   { type: 'W/O', no: 'W/O-2508-012', ac: 'HL5264', t: 'A-Check 준비 작업', st: 'OPEN', reg: dayKey(-4), close: '' },
   { type: 'NRC', no: 'NRC-0228', ac: 'HL5263', t: '', st: 'OPEN', reg: dayKey(-5), close: '' },
   { type: 'W/O', no: 'W/O-2508-007', ac: 'HL5263', t: '좌측 MLG 타이어 교환', st: 'CLOSE', reg: dayKey(-6), close: dayKey(-1) },
+  { type: 'NRC', no: 'NRC-0225', ac: 'HL5264', t: '카고 도어 씰 손상', st: 'CLOSE', reg: dayKey(-7), close: dayKey(-3) },
 ]
 
-// To-do 임시 데이터
+// To-do 임시 데이터 — 미완료는 체크될 때까지 매일 이월되고,
+// 완료(doneAt)된 항목은 완료한 그날만 보인다 (어제 완료 건은 다음날 사라짐)
 export const DEMO_TODOS = [
-  { id: 1, text: '7월 시간외 집계 제출', done: true },
-  { id: 2, text: 'XU2583 지연 보고서 작성', done: false },
-  { id: 3, text: '공구 인벤토리 확인', done: false },
-  { id: 4, text: 'NRC-0231 후속 조치 확인', done: false },
-  { id: 5, text: '주간 정비 회의 자료 준비', done: false },
-  { id: 6, text: '차량 정기 점검 예약', done: false },
+  { id: 1, text: '7월 시간외 집계 제출', done: true, doneAt: todayKey() },
+  { id: 2, text: 'XU2583 지연 보고서 작성', done: false, doneAt: '' },
+  { id: 3, text: '공구 인벤토리 확인', done: false, doneAt: '' },
+  { id: 4, text: 'NRC-0231 후속 조치 확인', done: false, doneAt: '' },
+  { id: 5, text: '주간 정비 회의 자료 준비', done: false, doneAt: '' },
+  { id: 6, text: '차량 정기 점검 예약', done: false, doneAt: '' },
+  { id: 7, text: '8월 1주차 근무표 검토', done: true, doneAt: dayKey(-1) },
 ]
 
 export const DEMO_MEMO = 'SPOT 228 변경 가능성 확인\n목요일 오전 교육 일정\n김찬수 대리 인수인계 문서'

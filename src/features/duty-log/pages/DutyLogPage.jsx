@@ -5,10 +5,21 @@ import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 import CategoryModal from '../components/CategoryModal.jsx'
 import TimeModal from '../components/TimeModal.jsx'
 import NrcWoCard from '../components/NrcWoCard.jsx'
-import { CAT_GROUPS, DEMO_LOGS, DEMO_TODOS, DEMO_MEMO, todayKey, nowHM, fmtDate } from '../utils.js'
+import ExportModal from '../components/ExportModal.jsx'
+import { CAT_GROUPS, DEMO_LOGS, DEMO_TODOS, DEMO_MEMO, demoLogsFor, todayKey, nowHM, fmtDate } from '../utils.js'
 import './duty-log.css'
 
 const pad = (n) => String(n).padStart(2, '0')
+
+// "HH:MM" 두 시각 사이 소요 표시 — "(30분)" / "(1시간 30분)" (자정 넘김은 +24h)
+const durTxt = (s, e) => {
+  const [h1, m1] = s.split(':').map(Number)
+  const [h2, m2] = e.split(':').map(Number)
+  let min = h2 * 60 + m2 - (h1 * 60 + m1)
+  if (min < 0) min += 24 * 60
+  const h = Math.floor(min / 60)
+  return h > 0 ? (min % 60 ? `${h}시간 ${min % 60}분` : `${h}시간`) : `${min}분`
+}
 
 // To-do · 메모 — 개인용, 백엔드 연동 전 화면 상태만 (좌측 카드 상단부)
 function TodoMemo() {
@@ -16,13 +27,17 @@ function TodoMemo() {
   const [draft, setDraft] = useState('')
   const [memo, setMemo] = useState(DEMO_MEMO)
 
-  const doneN = todos.filter((t) => t.done).length
-  const toggle = (id) => setTodos((s) => s.map((t) => (t.id === id ? { ...t, done: !t.done } : t)))
+  // 이월 규칙 — 미완료는 체크될 때까지 계속 보이고, 완료 건은 완료한 그날만 보인다.
+  // (백엔드 연동 시 서버에 doneAt 저장 — 지금은 화면 상태라 새로고침 전까지만 유지)
+  const visible = todos.filter((t) => !t.done || t.doneAt === todayKey())
+  const doneN = visible.filter((t) => t.done).length
+  const toggle = (id) =>
+    setTodos((s) => s.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? '' : todayKey() } : t)))
   const remove = (id) => setTodos((s) => s.filter((t) => t.id !== id))
   const add = () => {
     const text = draft.trim()
     if (!text) return
-    setTodos((s) => [...s, { id: Date.now(), text, done: false }])
+    setTodos((s) => [...s, { id: Date.now(), text, done: false, doneAt: '' }])
     setDraft('')
   }
 
@@ -30,10 +45,10 @@ function TodoMemo() {
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <span className="dl-ctitle">To-do</span>
-        <span className="dl-cnt">{doneN}/{todos.length}</span>
+        <span className="dl-cnt">{doneN}/{visible.length}</span>
       </div>
       <div className="dl-todolist">
-        {todos.map((t) => (
+        {visible.map((t) => (
           <div key={t.id} className="dl-titem">
             <button type="button" className={t.done ? 'dl-cb on' : 'dl-cb'} onClick={() => toggle(t.id)}>
               {t.done && <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg>}
@@ -98,7 +113,8 @@ function DayList({ logsByDate, date, onPick }) {
 
   return (
     <div className="dl-card" style={{ background: '#FBFBFD' }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+      {/* 헤더 높이 28 + 아래 여백 10 — NRC·W/O 카드와 행 시작 위치를 맞춘다 */}
+      <div style={{ display: 'flex', alignItems: 'center', height: 28, marginBottom: 10 }}>
         <span className="dl-ctitle">일별 일지</span>
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, position: 'relative' }}>
           <button type="button" className="dl-navbtn" style={{ width: 22, height: 22 }} onClick={() => stepMonth(-1)}>
@@ -188,8 +204,30 @@ function DutyLogPage() {
   const [catOpen, setCatOpen] = useState(false)
   const [timeTarget, setTimeTarget] = useState(null) // 'start' | 'end' | null
 
+  // 일지 주인 선택 — admin(김기홍·본부장)은 전체 인원, 팀장은 자기 팀원만.
+  // 로그인 연동 시 서버가 내려주는 권한으로 교체한다. 다른 사람 일지는 보기 전용.
+  const me = ROSTER.find((p) => p.name === CURRENT_USER.name)
+  const canPickTeam = CURRENT_USER.isAdmin
+  const canPickPerson = CURRENT_USER.isAdmin || me?.role === '팀장'
+  const [viewTeam, setViewTeam] = useState(null)
+  const [viewName, setViewName] = useState(null)
+  const [ownerSel, setOwnerSel] = useState(null) // 'team' | 'name' | null
+  const [xlOpen, setXlOpen] = useState(false) // 엑셀 추출 모달 (admin)
+  const viewing = viewName != null && viewName !== CURRENT_USER.name
+
+  const teams = [...new Set(ROSTER.map((p) => p.team))]
+  // admin 은 팀을 먼저 골라야 이름 목록이 나온다 (팀장은 자기 팀이 곧 범위)
+  const people = ROSTER
+    .filter((p) => (canPickTeam ? p.team === viewTeam : p.team === me?.team))
+    .map((p) => p.name)
+
+  const pickTeam = (t) => {
+    setViewTeam(t)
+    if (!t || ROSTER.find((p) => p.name === viewName)?.team !== t) setViewName(null)
+  }
+
   const isToday = date === todayKey()
-  const logs = logsByDate[date] ?? []
+  const logs = viewing ? demoLogsFor(viewName, date) : (logsByDate[date] ?? [])
 
   const stepDay = (delta) => {
     const [m, d] = date.split('.').map(Number)
@@ -197,9 +235,9 @@ function DutyLogPage() {
     setDate(`${pad(dt.getMonth() + 1)}.${pad(dt.getDate())}`)
   }
 
-  // 그날 내 근무코드의 출근·퇴근 시각 (스케줄 데모 로직 — 휴무 등 시간 없는 코드는 09:00~18:00)
+  // 그날 일지 주인의 근무코드 출근·퇴근 시각 (스케줄 데모 로직 — 휴무 등 시간 없는 코드는 09:00~18:00)
   const [selM, selD] = date.split('.').map(Number)
-  const shiftPi = ROSTER.findIndex((p) => p.name === CURRENT_USER.name)
+  const shiftPi = ROSTER.findIndex((p) => p.name === (viewing ? viewName : CURRENT_USER.name))
   const shiftTT = TIMES[pickCode(shiftPi, selD, new Date(new Date().getFullYear(), selM - 1, selD).getDay())]
   const shiftStart = shiftTT ? `${pad(shiftTT[0] % 24)}:00` : '09:00'
   const shiftEnd = shiftTT ? `${pad(shiftTT[1] % 24)}:00` : '18:00'
@@ -221,6 +259,47 @@ function DutyLogPage() {
   }
 
   const catGroup = cat ? CAT_GROUPS[cat.gi] : null
+
+  // 일지 주인 필터 — 두 필터 동일 크기, 선택 시 보라 틴트 + 값만 표시
+  const ownerFilter = (key, value, label, opts, onPick) => (
+    <span style={{ position: 'relative' }}>
+      <button
+        type="button"
+        className="dl-filter"
+        style={{
+          width: 96, justifyContent: 'center',
+          ...(value ? { background: '#E9E8F7', color: '#433FBB', borderColor: 'transparent', fontWeight: 800 } : {}),
+        }}
+        onClick={() => setOwnerSel((v) => (v === key ? null : key))}
+      >
+        {value ?? label}
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {ownerSel === key && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 65 }} onClick={() => setOwnerSel(null)} />
+          <div className="dl-fmenu">
+            {opts.length === 0 ? (
+              <div style={{ padding: '8px 14px', fontSize: 11.5, fontWeight: 700, color: '#B4B7C0', whiteSpace: 'nowrap' }}>
+                팀을 먼저 선택하세요
+              </div>
+            ) : (
+              <>
+                <button type="button" className="dl-fitem" style={{ color: '#B4B7C0' }} onClick={() => { onPick(null); setOwnerSel(null) }}>
+                  초기화
+                </button>
+                {opts.map((o) => (
+                  <button key={o} type="button" className={value === o ? 'dl-fitem on' : 'dl-fitem'} onClick={() => { onPick(o); setOwnerSel(null) }}>
+                    {o}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </span>
+  )
 
   return (
     <section>
@@ -256,9 +335,23 @@ function DutyLogPage() {
               </button>
               {calOpen && <DayCalPopover date={date} onPick={setDate} onClose={() => setCalOpen(false)} />}
             </div>
-            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#9C9CAB' }}>
-              {CURRENT_USER.name} · {CURRENT_USER.team.replace('섬에어 ', '')}
-            </span>
+            {canPickPerson ? (
+              // 일지 주인 필터 — 초기엔 "팀 / 이름", 선택하면 값만 표시. 초기화로 내 일지 복귀
+              <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
+                {canPickTeam && ownerFilter('team', viewTeam, '팀', teams, pickTeam)}
+                {ownerFilter('name', viewName, '이름', people, setViewName)}
+                {CURRENT_USER.isAdmin && (
+                  <button type="button" className="dl-xlbtn" onClick={() => setXlOpen(true)}>
+                    <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+                    엑셀
+                  </button>
+                )}
+              </span>
+            ) : (
+              <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: '#9C9CAB' }}>
+                {CURRENT_USER.name} · {CURRENT_USER.team.replace('섬에어 ', '')}
+              </span>
+            )}
           </div>
 
           {/* 세로 타임라인 — 출근 시각에서 시작해 퇴근 시각으로 끝나고, 선이 둘을 잇는다.
@@ -289,7 +382,7 @@ function DutyLogPage() {
                       {l.t && <span style={{ fontSize: 13.5, fontWeight: 600, color: '#3A3A46' }}>{l.t}</span>}
                     </div>
                     <div style={{ fontFamily: MONO, fontSize: 10.5, fontWeight: 700, color: '#B6B6C2', marginTop: 3 }}>
-                      {l.e ? `${l.s} ~ ${l.e}` : '진행 중'}
+                      {l.e ? `${l.s} ~ ${l.e} (${durTxt(l.s, l.e)})` : '진행 중'}
                     </div>
                   </div>
                 )
@@ -310,8 +403,8 @@ function DutyLogPage() {
             </div>
           </div>
 
-          {/* 입력 줄 — 오늘만, 회색 바 + 흰 박스 통일 */}
-          {isToday && (
+          {/* 입력 줄 — 오늘 + 내 일지일 때만 (다른 사람 일지는 보기 전용) */}
+          {isToday && !viewing && (
             <div className="dl-bar">
               <button
                 type="button"
@@ -345,6 +438,7 @@ function DutyLogPage() {
         <NrcWoCard />
       </div>
 
+      {xlOpen && <ExportModal logsByDate={logsByDate} onClose={() => setXlOpen(false)} />}
       {catOpen && <CategoryModal selected={cat} onPick={setCat} onClose={() => setCatOpen(false)} />}
       {timeTarget && (
         <TimeModal

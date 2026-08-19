@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { CURRENT_USER as USER } from '../lib/currentUser.js'
 
@@ -49,14 +50,25 @@ const MENUS = [
   },
 ]
 
-// 알림 연동 전 임시 값 (사용자는 shared/lib/currentUser.js)
-const ALARM_COUNT = 3
+// 알림 임시 데이터 — 백엔드 연동 시 알림 API 로 교체
+const DEMO_NOTIFS = [
+  { id: 1, text: 'W/O-2508-012 작업이 배정되었습니다', time: '10분 전', unread: true },
+  { id: 2, text: '8월 12일 시간외근무가 승인되었습니다', time: '2시간 전', unread: true },
+  { id: 3, text: '내일 근무가 OFF 로 변경되었습니다', time: '어제', unread: true },
+  { id: 4, text: 'NRC-0225 가 종결되었습니다', time: '2일 전', unread: false },
+]
 
 function Header() {
   // 현재 경로에 해당하는 메뉴를 찾아 브레드크럼에 표시
   const { pathname } = useLocation()
   const current =
     MENUS.find((m) => (m.to === '/' ? pathname === '/' : pathname.startsWith(m.to))) ?? MENUS[0]
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifs, setNotifs] = useState(DEMO_NOTIFS)
+  const unread = notifs.filter((n) => n.unread).length
+  const readAll = () => setNotifs((s) => s.map((n) => ({ ...n, unread: false })))
 
   return (
     <header className="hd">
@@ -67,35 +79,62 @@ function Header() {
       </div>
 
       <div className="hd__right">
-        <button type="button" className="hd__user">
-          <span className="hd__avatar">{USER.initial}</span>
-          <span className="hd__uinfo">
-            <span className="hd__uname">{USER.name}</span>
-            <span className="hd__uteam">{USER.team}</span>
-          </span>
-          <svg className="hd__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button type="button" className="hd__user" onClick={() => setMenuOpen((v) => !v)}>
+            <span className="hd__avatar">{USER.initial}</span>
+            <span className="hd__uinfo">
+              <span className="hd__uname">{USER.name}</span>
+              <span className="hd__uteam">{USER.team}</span>
+            </span>
+            <svg className="hd__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 80 }} onClick={() => setMenuOpen(false)} />
+              <div className="hd__menu">
+                <div className="hd__menu-info">
+                  <span className="hd__menu-name">{USER.name} · {USER.role}</span>
+                  <span className="hd__menu-email">{USER.email}</span>
+                </div>
+                {/* 로그인 연동 전 — 자리만; 로그인이 붙으면 세션 종료로 연결 */}
+                <button type="button" className="hd__menu-item" onClick={() => setMenuOpen(false)}>
+                  로그아웃
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
-        <button type="button" className="hd__ibtn" aria-label="검색">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35" />
-          </svg>
-        </button>
-        <button type="button" className="hd__ibtn" aria-label="알림">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          {ALARM_COUNT > 0 && <span className="hd__badge">{ALARM_COUNT}</span>}
-        </button>
-        <button type="button" className="hd__ibtn" aria-label="더보기">
-          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
-            <circle cx="12" cy="5" r="1.6" />
-            <circle cx="12" cy="12" r="1.6" />
-            <circle cx="12" cy="19" r="1.6" />
-          </svg>
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button type="button" className="hd__ibtn" aria-label="알림" onClick={() => setNotifOpen((v) => !v)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unread > 0 && <span className="hd__badge">{unread}</span>}
+          </button>
+          {notifOpen && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 80 }} onClick={() => setNotifOpen(false)} />
+              <div className="hd__menu hd__menu--notif">
+                <div className="hd__notif-head">
+                  <span>알림{unread > 0 && ` ${unread}`}</span>
+                  {unread > 0 && (
+                    <button type="button" className="hd__notif-readall" onClick={readAll}>모두 읽음</button>
+                  )}
+                </div>
+                {notifs.map((n) => (
+                  <div key={n.id} className="hd__notif-row">
+                    <span className="hd__notif-dot" style={{ background: n.unread ? '#5350E2' : 'transparent' }} />
+                    <span className="hd__notif-text" style={{ color: n.unread ? '#23232E' : '#9C9CAB' }}>{n.text}</span>
+                    <span className="hd__notif-time">{n.time}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </header>
   )

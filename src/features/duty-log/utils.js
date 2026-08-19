@@ -114,13 +114,13 @@ export const NW_ST = {
   CLOSE: { c: '#1F9D6B', b: '#E6F5EE' },
 }
 
-// reg: 등록일, close: 종결일 (CLOSE 전환 시 자동 기록)
+// reg: 등록일, close: 종결일 (CLOSE 전환 시 자동 기록), who: 작업자 표시("대표자 등 N명")
 export const DEMO_NRC_WO = [
-  { type: 'NRC', no: 'NRC-0231', ac: 'HL5264', t: '객실 시트 트랙 마모', st: 'OPEN', reg: dayKey(-2), close: '' },
-  { type: 'W/O', no: 'W/O-2508-012', ac: 'HL5264', t: 'A-Check 준비 작업', st: 'OPEN', reg: dayKey(-4), close: '' },
-  { type: 'NRC', no: 'NRC-0228', ac: 'HL5263', t: '', st: 'OPEN', reg: dayKey(-5), close: '' },
-  { type: 'W/O', no: 'W/O-2508-007', ac: 'HL5263', t: '좌측 MLG 타이어 교환', st: 'CLOSE', reg: dayKey(-6), close: dayKey(-1) },
-  { type: 'NRC', no: 'NRC-0225', ac: 'HL5264', t: '카고 도어 씰 손상', st: 'CLOSE', reg: dayKey(-7), close: dayKey(-3) },
+  { type: 'NRC', no: 'NRC-0231', ac: 'HL5264', t: '객실 시트 트랙 마모', st: 'OPEN', reg: dayKey(-2), close: '', who: '김찬수 등 2명' },
+  { type: 'W/O', no: 'W/O-2508-012', ac: 'HL5264', t: 'A-Check 준비 작업', st: 'OPEN', reg: dayKey(-4), close: '', who: '김기홍 등 3명' },
+  { type: 'NRC', no: 'NRC-0228', ac: 'HL5263', t: '', st: 'OPEN', reg: dayKey(-5), close: '', who: '이서용' },
+  { type: 'W/O', no: 'W/O-2508-007', ac: 'HL5263', t: '좌측 MLG 타이어 교환', st: 'CLOSE', reg: dayKey(-6), close: dayKey(-1), who: '문지환 등 2명' },
+  { type: 'NRC', no: 'NRC-0225', ac: 'HL5264', t: '카고 도어 씰 손상', st: 'CLOSE', reg: dayKey(-7), close: dayKey(-3), who: '김동민' },
 ]
 
 // To-do 임시 데이터 — 미완료는 체크될 때까지 매일 이월되고,

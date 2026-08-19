@@ -7,5 +7,6 @@ export const CURRENT_USER = {
   team: '섬에어 정비기획팀',
   role: '사원',
   initial: '김',
+  email: 'kihong.kim@sumair.kr',
   isAdmin: true,
 }

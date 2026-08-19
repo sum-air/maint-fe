@@ -395,11 +395,12 @@ body {
   transform: translateY(-50%) translateX(0);
 }
 
-/* 콘텐츠 영역: 헤더 높이 + 사이드바 rail 폭만큼 밀어둔다 (펼침은 위로 덮음) */
+/* 콘텐츠 영역: 헤더 높이 + 사이드바 rail 폭만큼 밀어둔다 (펼침은 위로 덮음).
+   헤더 오프셋은 margin-top 이 아니라 padding-top 으로 — margin 은 body 로 병합되어
+   body 의 min-height:100vh 와 합쳐지면 문서가 헤더 높이만큼 길어져 스크롤이 생긴다. */
 .layout__main {
-  margin-top: var(--hd);
   margin-left: var(--rail);
-  padding: 1.75rem 2rem;
+  padding: calc(var(--hd) + 1.75rem) 2rem 1.75rem;
 }
 
 .home h1 {
@@ -408,4 +409,125 @@ body {
 
 .home p {
   color: var(--n500);
+}
+
+/* 프로필 드롭다운 — 이름 클릭 시 이메일 + 로그아웃 */
+.hd__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 178px;
+  background: #fff;
+  border: 1px solid var(--n200);
+  border-radius: 13px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .16);
+  padding: 6px;
+  z-index: 90;
+}
+
+.hd__menu-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+  padding: 8px 10px 9px;
+  border-bottom: 1px solid var(--n100);
+  margin-bottom: 4px;
+}
+
+.hd__menu-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--n800);
+}
+
+.hd__menu-email {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--n500);
+}
+
+.hd__menu-item {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #D23B3B;
+  cursor: pointer;
+}
+
+.hd__menu-item:hover {
+  background: #FBEEEE;
+}
+
+/* 알림 드롭다운 — 종 아이콘 클릭 */
+.hd__menu--notif {
+  width: 352px;
+}
+
+.hd__notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px 9px;
+  border-bottom: 1px solid var(--n100);
+  margin-bottom: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--n800);
+}
+
+.hd__notif-readall {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--p600);
+  cursor: pointer;
+}
+
+.hd__notif-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 9px;
+}
+
+.hd__notif-row:hover {
+  background: var(--n50);
+}
+
+.hd__notif-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.hd__notif-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hd__notif-time {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #B4B4BE;
 }

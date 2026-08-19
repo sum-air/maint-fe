@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { MONO } from '../../../shared/lib/workCodes.js'
+import { MONO, ROSTER } from '../../../shared/lib/workCodes.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 import { AIRCRAFT_REGS, NW_TYPE, NW_ST, DEMO_NRC_WO, todayKey, fmtDate } from '../utils.js'
 
 const PAGE_SIZE = 5
+
+// 작업자 후보 — 실작업 수행 팀(정비기획·운항정비)만 (기술·품질·자재팀 제외)
+const WORKER_POOL = ROSTER.filter((p) => p.team === '정비기획팀' || p.team === '운항정비팀')
 
 // 등록/수정 모달 — 구분·기체 드롭다운 + 번호(필수) + 내용(선택).
 // 수정 모드에는 상태(OPEN/CLOSE) 선택과 삭제가 추가되고, CLOSE 전환 시 종결일이 자동 기록된다.
@@ -23,10 +26,15 @@ function NrcWoModal({ mode, item, onSave, onDelete, onClose }) {
     setClose(s === 'CLOSE' ? (close || todayKey()) : '')
   }
 
+  // 작업자 — 복수 선택. whoL(배열)로 편집하고, who 는 "대표자 등 N명" 표시용
+  const [whoL, setWhoL] = useState(item?.whoL ?? [])
+  const toggleWho = (n) => setWhoL((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
+
   const canSave = no.trim().length > 0
   const save = () => {
     if (!canSave) return
-    onSave({ type, ac, no: no.trim(), t: text.trim(), st, reg, close: st === 'CLOSE' ? close : '' })
+    const who = whoL.length === 0 ? '' : whoL.length === 1 ? whoL[0] : `${whoL[0]} 등 ${whoL.length}명`
+    onSave({ type, ac, no: no.trim(), t: text.trim(), st, reg, close: st === 'CLOSE' ? close : '', whoL, who })
     onClose()
   }
 
@@ -93,6 +101,40 @@ function NrcWoModal({ mode, item, onSave, onDelete, onClose }) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') save() }}
           />
+        </div>
+
+        {/* 작업자 — 복수 선택 드롭다운 (클릭으로 토글, 메뉴 유지) */}
+        <div style={{ marginBottom: 10, position: 'relative' }}>
+          <div style={lb}>작업자 (복수 선택)</div>
+          <button
+            type="button"
+            className="dl-filter"
+            style={{
+              width: '100%', height: 36, justifyContent: 'center', fontWeight: 800,
+              ...(whoL.length > 0 ? { background: '#E9E8F7', color: '#433FBB', borderColor: 'transparent' } : { color: '#B4B7C0' }),
+            }}
+            onClick={() => setOpenSel((v) => (v === 'who' ? null : 'who'))}
+          >
+            {whoL.length === 0 ? '작업자 선택' : whoL.length === 1 ? whoL[0] : `${whoL[0]} 외 ${whoL.length - 1}명`}
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          {openSel === 'who' && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 65 }} onClick={() => setOpenSel(null)} />
+              <div className="dl-fmenu" style={{ maxHeight: 216, overflowY: 'auto' }}>
+                {WORKER_POOL.map((p) => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    className={whoL.includes(p.name) ? 'dl-fitem on' : 'dl-fitem'}
+                    onClick={() => toggleWho(p.name)}
+                  >
+                    {p.name} · {p.role}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {mode === 'edit' && (

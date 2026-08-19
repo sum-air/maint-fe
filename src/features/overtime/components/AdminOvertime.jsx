@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
 import { OT_ST, ADMIN_REQS, groupReqsByTeam, dateWithDow, fmtHM, monthOf } from '../utils.js'
-import DayCalPopover from './DayCalPopover.jsx'
+import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 

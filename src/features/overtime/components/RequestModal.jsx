@@ -3,7 +3,7 @@ import { MONO, ROSTER, TIMES, pickCode } from '../../../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { formatTime, normalizeTime } from '../../../shared/lib/timeInput.js'
 import { dateWithDow } from '../utils.js'
-import DayCalPopover from './DayCalPopover.jsx'
+import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 
 const YEAR = 2026 // 데모 기준 연도 — 백엔드 연동 시 오늘 날짜로 교체
 const pad = (n) => String(n).padStart(2, '0')

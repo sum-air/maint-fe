@@ -1,0 +1,737 @@
+/* 업무일지 화면 — 3열(To-do·메모 │ 오늘 일지 │ 일별 리스트) + 흰 박스 입력 줄 */
+
+.dl-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dl-title {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+  line-height: 1.05;
+}
+
+/* 2열 그리드(To-do·메모 │ 일지) — 세로 높이 통일, 일별 목록은 아래 스트립 */
+.dl-grid {
+  display: grid;
+  grid-template-columns: 1fr 2.2fr;
+  gap: 13px;
+  align-items: stretch;
+  margin-top: 18px;
+}
+
+@media (max-width: 1000px) {
+  .dl-grid { grid-template-columns: 1fr; }
+  .dl-grid .dl-card:nth-child(2) { order: -1; }
+}
+
+/* 카드 */
+.dl-card {
+  border: 1px solid #E5E5EC;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(21, 21, 29, .04);
+  padding: 16px 18px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.dl-ctitle {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.dl-cnt {
+  display: inline-flex;
+  align-items: center;
+  height: 17px;
+  padding: 0 7px;
+  border-radius: 99px;
+  background: #F1F1FF;
+  font-size: 10px;
+  font-weight: 800;
+  color: #5350E2;
+}
+
+/* 날짜 이동 버튼 (앱 공통 스테퍼 문법) */
+.dl-navbtn {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6E6E80;
+}
+
+.dl-navbtn:hover {
+  background: #F0F0F5;
+}
+
+.dl-navbtn svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── To-do ── */
+/* 목록 — 기본 5개 높이, 넘어가면 스크롤 */
+.dl-todolist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 218px; /* 항목(38px) 5개 + 간격 */
+  overflow-y: auto;
+}
+
+.dl-titem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #fff;
+  border: 1px solid #EEEEF2;
+  border-radius: 10px;
+  padding: 9px 11px;
+}
+
+.dl-cb {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1.5px solid #D5D5DE;
+  background: #fff;
+  flex: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dl-cb.on {
+  background: #5350E2;
+  border-color: #5350E2;
+}
+
+.dl-cb svg {
+  width: 10px;
+  height: 10px;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dl-x {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: #D5D5DE;
+  font-size: 12px;
+  cursor: pointer;
+  flex: none;
+  padding: 0 2px;
+}
+
+.dl-x:hover {
+  color: #D23B3B;
+}
+
+.dl-ain {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid #E1E1E9;
+  border-radius: 9px;
+  padding: 0 11px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #3A3A46;
+  background: #fff;
+  outline: none;
+}
+
+.dl-ain::placeholder {
+  color: #B4B7C0;
+}
+
+.dl-ab {
+  height: 32px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #5350E2, #7A6FF0);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(83, 80, 226, .3);
+  flex: none;
+}
+
+/* 메모 — 옐로 노트 (A안). 일정 높이를 넘으면 스크롤 */
+.dl-memo {
+  flex: 1;
+  min-height: 96px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #FFF9DB;
+  border: 1px solid #F2E9B8;
+  border-radius: 12px;
+  padding: 12px 13px;
+  box-shadow: 0 4px 10px rgba(180, 160, 60, .10);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6B5F1E;
+  line-height: 1.85;
+  resize: none;
+  outline: none;
+  width: 100%;
+}
+
+/* ── 입력 줄 — 회색 바 + 흰 박스 통일 ── */
+.dl-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  border-radius: 12px;
+  background: #F7F7FA;
+  padding: 8px;
+  margin-top: auto;
+}
+
+.dl-wbox {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(21, 21, 29, .07);
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  flex: none;
+}
+
+.dl-catbox {
+  width: 108px;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: #9C9CAB;
+  border: none;
+  cursor: pointer;
+}
+
+.dl-catbox span {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-timebox {
+  width: 144px;
+  justify-content: center;
+  padding: 0 6px;
+  gap: 2px;
+}
+
+.dl-timebtn {
+  width: 52px;
+  border: none;
+  background: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 800;
+  color: #433FBB;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dl-timebtn:hover {
+  color: #5350E2;
+}
+
+.dl-cin {
+  flex: 1;
+  min-width: 120px;
+  padding: 0 13px;
+}
+
+.dl-cin input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3A3A46;
+}
+
+.dl-cin input::placeholder {
+  color: #B4B7C0;
+}
+
+.dl-addbtn {
+  height: 34px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.dl-addbtn.on {
+  background: #5350E2;
+  color: #fff;
+  cursor: pointer;
+}
+
+.dl-addbtn.on:hover {
+  background: #433FBB;
+}
+
+.dl-addbtn.off {
+  background: #EEEEF2;
+  color: #B4B7C0;
+  cursor: not-allowed;
+}
+
+/* ── 일별 일지 카드 (월 필터 + 5일 페이지네이션) ── */
+.dl-dayrows {
+  width: 100%;
+}
+
+/* 행 — 고정 폭 열 + 균일 간격(13px), 전부 가운데 정렬. 오늘 배지는 왼쪽 여백(48px) 안에 */
+/* 행 — 5열 그리드(배지·날짜·코드·시간대·화살표). 내용 폭 고정 + 남는 공간을 열 사이에 균등 분배 */
+.dl-drow {
+  display: grid;
+  /* 코드 열이 남는 공간을 전부 가져가 — 날짜↔코드, 코드↔시간대 간격이 가장 크게 벌어진다 */
+  grid-template-columns: 44px max-content minmax(112px, 1fr) 90px 24px;
+  column-gap: 10px;
+  align-items: center;
+  justify-items: center;
+  padding: 9px 14px;
+  border-radius: 9px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.dl-drow:hover {
+  background: #F6F6FB;
+}
+
+.dl-drow.on,
+.dl-drow.on:hover {
+  background: #F1F1FF;
+}
+
+.dl-todaybadge {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: 99px;
+  background: #ECECFF;
+  color: #5350E2;
+  font-size: 8.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dl-codechip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: 2px 0;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  flex: none;
+}
+
+.dl-tspan {
+  width: 84px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #B6B6C2;
+  text-align: center;
+  flex: none;
+}
+
+/* 이동 화살표 — 호버 시에만 표시 (F안) */
+.dl-goarrow {
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  opacity: 0;
+  transition: opacity .12s;
+}
+
+.dl-drow:hover .dl-goarrow {
+  opacity: 1;
+}
+
+.dl-goarrow svg {
+  width: 13px;
+  height: 13px;
+  stroke: #5350E2;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 월 선택 팝오버 — 스테퍼 폭에 맞춤 */
+.dl-mpop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 11px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  padding: 8px;
+  z-index: 70;
+}
+
+.dl-mcell {
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #363643;
+}
+
+.dl-mcell:hover {
+  background: #F4F4F8;
+}
+
+.dl-mcell.on {
+  background: #6868FF;
+  color: #fff;
+}
+
+/* ── NRC · W/O 카드 ── */
+/* 필터 드롭다운 (팀 관리 필터 문법) */
+.dl-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #4E4E5E;
+  cursor: pointer;
+}
+
+.dl-filter:hover {
+  background: #F8F8FC;
+}
+
+.dl-filter.on {
+  border-color: #C7C5FF;
+  color: #5350E2;
+  background: #F7F7FF;
+}
+
+.dl-filter svg {
+  width: 10px;
+  height: 10px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dl-fmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 11px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  padding: 5px;
+  z-index: 70;
+}
+
+/* 카드 하단 등록 줄에서는 위로 펼침 */
+.dl-fmenu.up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.dl-fitem {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 7px 14px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #363643;
+  cursor: pointer;
+}
+
+.dl-fitem:hover {
+  background: #F4F4F8;
+}
+
+.dl-fitem.on {
+  background: #F1F1FF;
+  color: #5350E2;
+}
+
+.dl-nwrow {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 7px 12px;
+  border: none;
+  border-bottom: 1px solid #F6F6F9;
+  border-radius: 8px;
+  background: none;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dl-nwrow:hover {
+  background: #F8F8FC;
+}
+
+/* 등록 버튼 — 필터와 같은 높이의 컴팩트 그라데이션 */
+.dl-newbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 28px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #5350E2, #7A6FF0);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(83, 80, 226, .3);
+  cursor: pointer;
+  flex: none;
+}
+
+.dl-newbtn:hover {
+  background: linear-gradient(120deg, #433FBB, #6A5FE8);
+}
+
+/* 날짜 2줄 스택 캡션 */
+.dl-dcap {
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #C2C2CE;
+  letter-spacing: .4px;
+}
+
+/* 내용 셀 — 말줄임 + 호버 시 전체 툴팁 (시간외 사유 문법) */
+.dl-nwreason {
+  position: relative;
+}
+
+.dl-nwtip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  background: #2A2A38;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  padding: 9px 12px;
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(21, 21, 29, .25);
+  z-index: 80;
+  text-align: center;
+}
+
+.dl-nwtip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #2A2A38;
+}
+
+.dl-nwreason:hover .dl-nwtip {
+  display: block;
+}
+
+.dl-typebadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  padding: 2px 0;
+  border-radius: 6px;
+  font-size: 9.5px;
+  font-weight: 800;
+  flex: none;
+}
+
+.dl-acchip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  background: #F1F1F4;
+  color: #43434E;
+  flex: none;
+}
+
+.dl-stpill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  flex: none;
+  gap: 5px;
+  padding: 3px 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  flex: none;
+}
+
+.dl-stpill i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+
+/* ── 모달 공용 부품 ── */
+/* 카테고리 칩 (모달) */
+.dl-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  user-select: none;
+}
+
+/* 타임라인 항목 카테고리 칩 */
+.dl-catchip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  flex: none;
+}
+
+/* 시간 모달 ± 칩 */
+.dl-tchip {
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: #F4F4F8;
+  color: #4E4E5E;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dl-tchip:hover {
+  background: #ECECFF;
+  color: #5350E2;
+}
+
+/* 현재 시각 링크 */
+.dl-nowlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  color: #8A8A98;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dl-nowlink:hover {
+  color: #5350E2;
+}
+
+.dl-nowlink svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MONO } from '../../../shared/lib/workCodes.js'
+import { MONO } from '../lib/workCodes.js'
 
 const YEAR = 2026 // 데모 기준 연도 — 백엔드 연동 시 오늘 날짜로 교체
 const pad = (n) => String(n).padStart(2, '0')

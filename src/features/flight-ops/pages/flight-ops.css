@@ -1,24 +1,374 @@
-.fo-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.fo-title { font-size: 27px; font-weight: 800; letter-spacing: -.7px; }
-.fo-date { border: 1px solid var(--n200); border-radius: 8px; padding: 6px 10px; font: inherit; }
-.fo-note { color: var(--n400); font-size: 12px; }
+/* 실시간 운항 화면 — 보딩패스 티켓 스택 (시안 1안 확정) */
 
-.fo-msg { margin: 24px 0; color: var(--n500); }
-.fo-msg--err { color: var(--red); }
-.fo-code { color: var(--n400); font-size: 12px; margin-left: 6px; }
-
-.fo-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
-.fo-table th {
-  text-align: left; padding: 10px 12px; color: var(--n500); font-weight: 600;
-  font-size: 12px; border-bottom: 1px solid var(--n200); white-space: nowrap;
+.fo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
-.fo-table td { padding: 12px; border-bottom: 1px solid var(--line); }
-.fo-table tbody tr:hover { background: var(--n50); }
 
-.fo-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-.fo-flt { font-weight: 700; }
+.fo-title {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+  line-height: 1.05;
+}
 
-.fo-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.fo-irr { margin-left: 6px; font-size: 11px; color: var(--n400); }
+/* 카드 */
+.fo-card {
+  border: 1px solid #E5E5EC;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(21, 21, 29, .04);
+  overflow: hidden;
+}
 
-.fo-foot { margin-top: 16px; color: var(--n400); font-size: 12px; }
+/* 항공기 등록부호 탭 (첫 줄) */
+.fo-tabs {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 0 24px;
+  border-bottom: 1px solid #F0F0F4;
+}
+
+.fo-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 13px 6px 13px 2px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #A6A6B2;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+}
+
+.fo-tab.on {
+  font-weight: 800;
+  color: #15151D;
+  border-bottom-color: #5350E2;
+}
+
+/* 편수 배지 — 탭 우상단 모서리, 폭 차지 안 함 */
+.fo-cnt {
+  position: absolute;
+  top: 6px;
+  right: -9px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #C2C2CE;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.fo-tab.on .fo-cnt {
+  background: #5350E2;
+}
+
+/* 구간 필터 (탭 줄 우측) — 팀 관리 필터와 동일 문법 */
+.fo-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4E4E5E;
+  cursor: pointer;
+}
+
+.fo-filter:hover {
+  background: #F8F8FC;
+}
+
+.fo-filter.on {
+  border-color: #C7C5FF;
+  color: #5350E2;
+  background: #F7F7FF;
+}
+
+.fo-filter svg {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fo-fmenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 11px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  padding: 5px;
+  z-index: 70;
+}
+
+.fo-fitem {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 7px 14px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #363643;
+  cursor: pointer;
+}
+
+.fo-fitem:hover {
+  background: #F4F4F8;
+}
+
+.fo-fitem.on {
+  background: #F1F1FF;
+  color: #5350E2;
+}
+
+/* 운항중 트랙 — 레일형 7px (남은 구간 연보라 레일) + 부드러운 전진 */
+.fo-rail {
+  position: absolute;
+  top: 8.5px;
+  left: 0;
+  right: 0;
+  height: 7px;
+  border-radius: 99px;
+  background: #E9E8F7;
+}
+
+.fo-bar {
+  position: absolute;
+  top: 8.5px;
+  left: 0;
+  height: 7px;
+  border-radius: 99px;
+  background: #5350E2;
+  transition: width 1.2s linear;
+}
+
+.fo-planebox {
+  position: absolute;
+  top: 1px; /* 22px 아이콘 중심이 레일 중심(y=12)에 오도록 */
+  transform: translateX(-50%);
+  transition: left 1.2s linear;
+  line-height: 0;
+}
+
+/* 비행기 위 진행 라벨 — 00% · 0분 남음 */
+.fo-planelabel {
+  position: absolute;
+  top: -13px;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #5350E2;
+  white-space: nowrap;
+  transition: left 1.2s linear;
+}
+
+.fo-planebox svg {
+  width: 22px;
+  height: 22px;
+  stroke: #5350E2;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 티켓 행 — SI 리마크 스트립이 아래 줄로 감싸지도록 wrap */
+.fo-row {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #F0F0F4;
+}
+
+/* MVT SI 리마크 스트립 — 딜레이 사유 등 (리마크 있는 행에만) */
+.fo-si {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 24px;
+  background: #FDF8EE;
+  border-top: 1px solid #F6EBD2;
+}
+
+.fo-si-badge {
+  flex: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  color: #C97A17;
+  background: #FBEFD9;
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.fo-si-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #9A6A17;
+}
+
+.fo-si-code {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #C9AC72;
+}
+
+.fo-row:last-child {
+  border-bottom: none;
+}
+
+.fo-row.now {
+  background: #F8F8FF;
+  box-shadow: inset 0 0 0 1.5px #5350E2; /* 운항중 행 — 보라 인셋 링 */
+}
+
+/* 구간(트랙) : 절취부 = 7 : 3 */
+.fo-leg {
+  flex: 7;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* 절취선 우측 — 편명·상태·PAX·지연 사유 */
+.fo-stub {
+  flex: 3;
+  min-width: 158px;
+  border-left: 2px dashed #E9E9F0;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  text-align: center;
+}
+
+/* 절취부 PAX·FUEL 2열 미니 스탯 + FUEL 호버 시 스팟 툴팁 */
+.fo-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  width: 100%;
+  max-width: 220px;
+  align-self: center;
+  margin-top: 2px;
+}
+
+.fo-statlb {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #B6B6C2;
+  letter-spacing: .4px;
+}
+
+.fo-statv {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: #3A3A46;
+}
+
+.fo-statv small {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8A8A98;
+}
+
+.fo-fuel {
+  position: relative;
+  cursor: default;
+}
+
+.fo-fuel .fo-statv {
+  border-bottom: 1.5px dashed #C7C5FF;
+  padding-bottom: 1px;
+  display: inline-block;
+}
+
+.fo-fueltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  background: #2A2A38;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(21, 21, 29, .25);
+  z-index: 80;
+  text-align: center;
+}
+
+.fo-fueltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #2A2A38;
+}
+
+.fo-fuel:hover .fo-fueltip {
+  display: block;
+}
+
+/* 상태 알약 */
+.fo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fo-pill i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}

@@ -1,0 +1,490 @@
+/* 시간외근무 화면 — 클로드 디자인 "시간외근무 관리/근무자 (시안)" 기준 */
+
+.ot-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ot-title {
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -.7px;
+  line-height: 1.05;
+}
+
+/* 내 시간외 / 팀 관리 토글 (출퇴근과 동일 문법) */
+.ot-scope {
+  display: inline-flex;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 9px;
+  padding: 3px;
+}
+
+.ot-scopetab {
+  font-family: inherit;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  background: transparent;
+  color: #8A8A98;
+}
+
+.ot-scopetab:hover {
+  background: #F8F8FC;
+  color: #363643;
+}
+
+.ot-scopetab.on {
+  background: #6868FF;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(104, 104, 255, .3);
+}
+
+/* 카드 */
+.ot-card {
+  border: 1px solid #E5E5EC;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(21, 21, 29, .04);
+  padding: 22px 26px;
+}
+
+/* 월 이동 버튼 */
+.ot-navbtn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6E6E80;
+}
+
+.ot-navbtn:hover {
+  background: #F0F0F5;
+}
+
+.ot-navbtn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 연/월 선택 팝오버 */
+.ot-cal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+}
+
+.ot-cal {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%; /* 스테퍼(‹ 라벨 ›) 전체 폭에 맞춤 */
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  z-index: 70;
+  padding: 11px;
+}
+
+.ot-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.ot-cal-nav {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #E5E5EC;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #6E6E80;
+  cursor: pointer;
+}
+
+.ot-cal-nav:hover {
+  background: #F8F8FC;
+}
+
+.ot-cal-nav svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ot-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+
+.ot-cal-m {
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #363643;
+}
+
+.ot-cal-m:hover {
+  background: #F4F4F8;
+}
+
+.ot-cal-m.on {
+  background: #6868FF;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(104, 104, 255, .32);
+}
+
+/* 신청 버튼 — 그라데이션, 컴팩트 */
+.ot-newbtn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 15px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #5350E2, #7A6FF0);
+  color: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(83, 80, 226, .32);
+}
+
+.ot-newbtn:hover {
+  background: linear-gradient(120deg, #433FBB, #6A5FE8);
+}
+
+/* 테이블 — 사유 툴팁이 밖으로 뜰 수 있게 overflow 는 visible, 모서리는 헤더에서 처리 */
+.ot-table {
+  border: 1px solid #EAEAEF;
+  border-radius: 12px;
+}
+
+.ot-gridhead {
+  display: grid;
+  background: #F6F6FA;
+  border-bottom: 1px solid #EAEAEF;
+  border-radius: 11px 11px 0 0;
+}
+
+.ot-hh {
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #9C9CAB;
+  text-align: center;
+}
+
+.ot-band {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: #FAFAFE;
+  border-bottom: 1px solid #ECECF2;
+}
+
+.ot-cnt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 19px;
+  padding: 0 7px;
+  border-radius: 99px;
+  background: #fff;
+  border: 1px solid #DDDCFA;
+  font-size: 11px;
+  font-weight: 800;
+  color: #5350E2;
+}
+
+.ot-row {
+  display: grid;
+  align-items: center;
+  min-height: 52px;
+  border-bottom: 1px solid #F4F4F7;
+}
+
+.ot-cell {
+  padding: 11px 14px;
+  text-align: center;
+}
+
+.ot-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #3A3A46;
+}
+
+/* 사유 셀 — 칸 넘으면 말줄임(…) + 호버 시 다크 툴팁으로 전체 표시 */
+.ot-reason {
+  position: relative;
+  min-width: 0;
+}
+
+.ot-reason-clip {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ot-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 260px;
+  background: #2A2A38;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  padding: 9px 12px;
+  border-radius: 9px;
+  box-shadow: 0 10px 28px rgba(21, 21, 29, .25);
+  z-index: 80;
+  text-align: center;
+}
+
+.ot-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #2A2A38;
+}
+
+.ot-reason:hover .ot-tip {
+  display: block;
+}
+
+.ot-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px; /* 필터 버튼(.ot-filter)과 동일 높이 */
+  padding: 0 13px;
+  border-radius: 99px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ── 캘린더 보기 ── */
+.otc {
+  border: 1px solid #DADAE2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.otc-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: #F4F4F8;
+  border-bottom: 1px solid #DADAE2;
+}
+
+.otc-dow div {
+  text-align: center;
+  padding: 7px 0;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.otc-cells {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.otc-cell {
+  min-height: 92px;
+  border-right: 1px solid #EDEDF2;
+  border-bottom: 1px solid #EDEDF2;
+  background: #fff;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.otc-chip {
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 10.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: center;
+  text-align: center;
+}
+
+/* 필터 버튼 (인원/일자) + 드롭다운 메뉴 */
+.ot-filter {
+  position: relative; /* 개수 배지(.ot-fbadge)의 기준 */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4E4E5E;
+  cursor: pointer;
+}
+
+.ot-filter:hover {
+  background: #F8F8FC;
+}
+
+.ot-filter.on {
+  border-color: #C7C5FF;
+  color: #5350E2;
+  background: #F7F7FF;
+}
+
+/* 필터 버튼 선택 개수 배지 — 우상단 모서리에 겹쳐서 버튼 폭에 영향 없음 */
+.ot-fbadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #5350E2;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.ot-filter svg {
+  width: 11px;
+  height: 11px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ot-filtermenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid #E5E5EC;
+  border-radius: 11px;
+  box-shadow: 0 18px 44px rgba(21, 21, 29, .18);
+  padding: 5px;
+  z-index: 70;
+}
+
+.ot-filteritem {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 7px 14px;
+  border: none;
+  background: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #363643;
+  cursor: pointer;
+}
+
+.ot-filteritem:hover {
+  background: #F4F4F8;
+}
+
+.ot-filteritem.on {
+  background: #F1F1FF;
+  color: #5350E2;
+}
+
+/* 승인/반려 액션 버튼 */
+.ot-act {
+  border: none;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 5px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ot-act--ok {
+  color: #1F9D6B;
+  background: #E6F5EE;
+}
+
+.ot-act--ok:hover {
+  background: #D3EEDF;
+}
+
+.ot-act--no {
+  color: #D23B3B;
+  background: #FBE6E6;
+}
+
+.ot-act--no:hover {
+  background: #F6D4D4;
+}

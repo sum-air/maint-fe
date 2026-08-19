@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
-import { APT, FLT_ST, FLEET, AIRPORT_OPTS, actColor } from '../utils.js'
+import { fetchFlights } from '../api.js'
+import { APT, FLT_ST, FLEET, AIRPORT_OPTS, actColor, mapFlights, todayGmt } from '../utils.js'
 import './flight-ops.css'
-
-const AIRCRAFT = Object.keys(FLEET)
 
 // 여객기 아이콘 (아웃라인, 진행 방향 45°) — 운항중·도착 트랙 공용
 function PlaneIcon() {
@@ -114,15 +113,16 @@ function TicketRow({ leg }) {
             </span>
           )}
         </div>
-        {/* PAX | FUEL 2열 — 급유 없는 편은 0kg, 스팟이 있으면 호버로 표시 */}
+        {/* PAX | FUEL 2열 — 급유 없는 편은 0kg, 스팟이 있으면 호버로 표시.
+            atlas 응답에는 아직 없는 필드라 실데이터에선 '—' (백엔드 필드 추가 요청 상태) */}
         <div className="fo-stats">
           <div>
             <div className="fo-statlb">PAX</div>
-            <div className="fo-statv">{leg.pax}<small>명</small></div>
+            <div className="fo-statv">{leg.pax != null ? <>{leg.pax}<small>명</small></> : '—'}</div>
           </div>
           <div className={leg.spot ? 'fo-fuel' : undefined}>
             <div className="fo-statlb">FUEL</div>
-            <div className="fo-statv">{leg.fuel.toLocaleString()}<small>kg</small></div>
+            <div className="fo-statv">{leg.fuel != null ? <>{leg.fuel.toLocaleString()}<small>kg</small></> : '—'}</div>
             {leg.spot && <div className="fo-fueltip">SPOT {leg.spot}</div>}
           </div>
         </div>
@@ -140,14 +140,37 @@ function TicketRow({ leg }) {
   )
 }
 
-// 실시간 운항 — 항공기 등록부호 탭 + 구간 필터 + 보딩패스 티켓 스택 (movement API 연동 전 데모)
+// 실시간 운항 — 항공기 등록부호 탭 + 구간 필터 + 보딩패스 티켓 스택.
+// 데이터는 atlas /flights (GMT 운항일) — 연결 실패 시 데모 데이터로 폴백해 화면 작업은 계속 가능하다.
 function FlightOpsPage() {
-  const [reg, setReg] = useState(AIRCRAFT[0])
+  const [fleet, setFleet] = useState(null) // null = 로딩 중
+  const [apiErr, setApiErr] = useState(null)
+  const [regSel, setRegSel] = useState(null)
   const [depF, setDepF] = useState(null) // 출발 공항 필터 ('G'|'H'|null)
   const [arrF, setArrF] = useState(null) // 도착 공항 필터
   const [openMenu, setOpenMenu] = useState(null) // 'dep' | 'arr' | null
 
-  const legs = FLEET[reg].filter((l) => {
+  const [date, setDate] = useState(todayGmt) // GMT 운항일 (YYYY-MM-DD) — 백엔드 날짜 키와 같은 기준
+
+  useEffect(() => {
+    let alive = true
+    setFleet(null)
+    fetchFlights(date)
+      .then((rows) => { if (alive) { setFleet(mapFlights(rows)); setApiErr(null) } })
+      .catch((e) => { if (alive) { setFleet(FLEET); setApiErr(e) } })
+    return () => { alive = false }
+  }, [date])
+
+  // 운항일 이동 — GMT 기준이라 날짜 산술도 UTC 도메인에서 한다
+  const stepDate = (delta) => {
+    const [y, m, d] = date.split('-').map(Number)
+    setDate(new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10))
+  }
+
+  const aircraft = Object.keys(fleet ?? {})
+  const reg = regSel && aircraft.includes(regSel) ? regSel : aircraft[0]
+
+  const legs = (fleet?.[reg] ?? []).filter((l) => {
     const [from, to] = l.dir.split('')
     return (!depF || from === depF) && (!arrF || to === arrF)
   })
@@ -158,15 +181,43 @@ function FlightOpsPage() {
     <section>
       <div className="fo-head">
         <span className="fo-title">실시간 운항</span>
+        {/* 운항일 스테퍼 — 앱 공통 문법 (‹ 날짜 ›), GMT 운항일 기준 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button type="button" className="fo-navbtn" onClick={() => stepDate(-1)}>
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <span style={{ fontFamily: MONO, fontSize: 13.5, fontWeight: 800, minWidth: 78, textAlign: 'center' }}>
+            {Number(date.slice(5, 7))}월 {Number(date.slice(8, 10))}일
+          </span>
+          <button type="button" className="fo-navbtn" onClick={() => stepDate(1)}>
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#B6B6C2' }}>GMT 운항일</span>
+        </div>
       </div>
 
+      {apiErr && (
+        <div style={{ marginTop: 14, padding: '9px 14px', borderRadius: 10, background: '#FBEFD9', color: '#C97A17', fontSize: 12, fontWeight: 700 }}>
+          atlas 연결 실패 — {apiErr.message} · 데모 데이터를 표시 중입니다
+        </div>
+      )}
+
+      {fleet === null ? (
+        <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#B4B7C0' }}>
+          불러오는 중…
+        </div>
+      ) : aircraft.length === 0 ? (
+        <div style={{ padding: '48px 0', textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#B4B7C0' }}>
+          이 운항일에 편이 없습니다
+        </div>
+      ) : (
       <div className="fo-card" style={{ marginTop: 18 }}>
         {/* 항공기 등록부호 탭 + 구간 필터 */}
         <div className="fo-tabs">
-          {AIRCRAFT.map((r) => (
-            <button key={r} type="button" className={reg === r ? 'fo-tab on' : 'fo-tab'} onClick={() => setReg(r)}>
+          {aircraft.map((r) => (
+            <button key={r} type="button" className={reg === r ? 'fo-tab on' : 'fo-tab'} onClick={() => setRegSel(r)}>
               {r}
-              <span className="fo-cnt">{FLEET[r].length}</span>
+              <span className="fo-cnt">{fleet[r].length}</span>
             </button>
           ))}
           <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 8, padding: '8px 0' }}>
@@ -213,6 +264,7 @@ function FlightOpsPage() {
           </div>
         )}
       </div>
+      )}
     </section>
   )
 }

@@ -50,3 +50,72 @@ export const actColor = (sched, act) => {
   if (act < sched) return '#2F7DB0'
   return '#15151D'
 }
+
+// ── atlas /flights 응답 → 화면 leg 매핑 ──
+// 시각은 전부 UTC ISO 로 오고 KST 변환은 여기서만 한다.
+// PAX·FUEL·SPOT·SI 는 아직 응답에 없다 (백엔드 필드 추가 요청 상태) — 화면은 '—' 처리.
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+// 오늘의 GMT 운항일 (YYYY-MM-DD) — 백엔드가 쓰는 날짜 키와 같은 기준
+export const todayGmt = () => new Date().toISOString().slice(0, 10)
+
+const kstHM = (iso) => {
+  if (!iso) return ''
+  const k = new Date(Date.parse(iso) + 9 * 3600 * 1000)
+  return `${pad2(k.getUTCHours())}:${pad2(k.getUTCMinutes())}`
+}
+
+// 백엔드 FlightStatus → 화면 상태 라벨. 판정은 백엔드 몫이고 여기선 라벨만 붙인다.
+const STATUS_TO_ST = {
+  SCHEDULED: '예정',
+  DEPARTED: '운항중',
+  AIRBORNE: '운항중',
+  LANDED: '도착',
+  ARRIVED: '도착',
+  CANCELLED: '결항',
+  IRREGULAR: '지연',
+}
+
+// 공항 코드 → APT 키. 미등록 공항은 즉석 등록해서 화면이 깨지지 않게 한다.
+const aptKey = (code) => {
+  const found = Object.keys(APT).find((k) => APT[k].code === code)
+  if (found) return found
+  APT[code] = { name: code, code }
+  return code
+}
+
+export function mapFlights(rows) {
+  const sorted = [...(rows ?? [])].sort((a, b) =>
+    (a.scheduledDepartureUtc ?? '').localeCompare(b.scheduledDepartureUtc ?? ''))
+
+  const byReg = {}
+  for (const f of sorted) {
+    const delay = Math.max(0, f.departureDelayMinutes ?? 0)
+    const st = f.status === 'SCHEDULED' && delay > 0 ? '지연' : (STATUS_TO_ST[f.status] ?? '예정')
+
+    // 진행률 — 실제 출발(없으면 계획)과 예상 도착(백엔드 제공) 사이에서 현재 시각 위치
+    const depMs = Date.parse(f.actualRampOutUtc ?? f.actualTakeOffUtc ?? f.scheduledDepartureUtc)
+    const arrMs = Date.parse(f.estimatedArrivalUtc ?? f.scheduledArrivalUtc) + (f.estimatedArrivalUtc ? 0 : delay * 60000)
+    const cur = st === '운항중'
+    const pct = cur && arrMs > depMs
+      ? Math.min(98, Math.max(2, Math.round(((Date.now() - depMs) / (arrMs - depMs)) * 100)))
+      : undefined
+
+    const leg = {
+      fno: f.flightNumber,
+      dir: `${aptKey(f.departureAirport)}${aptKey(f.arrivalAirport)}`,
+      std: kstHM(f.scheduledDepartureUtc),
+      sta: kstHM(f.scheduledArrivalUtc),
+      ad: kstHM(f.actualRampOutUtc ?? f.actualTakeOffUtc),
+      aa: kstHM(f.actualRampInUtc),
+      eta: cur ? kstHM(f.estimatedArrivalUtc ?? new Date(arrMs).toISOString()) : '',
+      st,
+      pct,
+      dl: f.irregularityCode ?? '',
+      spot: f.arrivalSpot ?? f.departureSpot ?? '', // 도착 주기장 우선 (FUEL 호버 툴팁)
+    }
+    ;(byReg[f.registration ?? '미지정'] ??= []).push(leg)
+  }
+  return byReg
+}

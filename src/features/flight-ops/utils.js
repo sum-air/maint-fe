@@ -57,8 +57,11 @@ export const actColor = (sched, act) => {
 
 const pad2 = (n) => String(n).padStart(2, '0')
 
-// 오늘의 GMT 운항일 (YYYY-MM-DD) — 백엔드가 쓰는 날짜 키와 같은 기준
-export const todayGmt = () => new Date().toISOString().slice(0, 10)
+// 오늘의 KST 달력일 (YYYY-MM-DD) — 화면은 한국 날짜 기준으로 하루를 센다
+export const todayKst = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)
+
+// UTC ISO → 그 시각의 KST 달력일 (YYYY-MM-DD)
+export const kstDateOf = (iso) => (iso ? new Date(Date.parse(iso) + 9 * 3600 * 1000).toISOString().slice(0, 10) : '')
 
 const kstHM = (iso) => {
   if (!iso) return ''

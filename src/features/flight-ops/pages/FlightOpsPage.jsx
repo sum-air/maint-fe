@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
 import { fetchFlights } from '../api.js'
-import { APT, FLT_ST, FLEET, AIRPORT_OPTS, actColor, mapFlights, todayGmt } from '../utils.js'
+import { APT, FLT_ST, FLEET, AIRPORT_OPTS, actColor, mapFlights, todayKst, kstDateOf } from '../utils.js'
 import './flight-ops.css'
 
 // 여객기 아이콘 (아웃라인, 진행 방향 45°) — 운항중·도착 트랙 공용
@@ -150,22 +150,30 @@ function FlightOpsPage() {
   const [arrF, setArrF] = useState(null) // 도착 공항 필터
   const [openMenu, setOpenMenu] = useState(null) // 'dep' | 'arr' | null
 
-  const [date, setDate] = useState(todayGmt) // GMT 운항일 (YYYY-MM-DD) — 백엔드 날짜 키와 같은 기준
+  const [date, setDate] = useState(todayKst) // KST 달력일 (YYYY-MM-DD) — 화면은 한국 날짜 기준
 
+  // 날짜 산술은 UTC 도메인에서 (KST 로컬 산술 함정 회피)
+  const shiftDate = (d, delta) => {
+    const [y, m, dd] = d.split('-').map(Number)
+    return new Date(Date.UTC(y, m - 1, dd + delta)).toISOString().slice(0, 10)
+  }
+  const stepDate = (delta) => setDate(shiftDate(date, delta))
+
+  // 백엔드 조회 키는 GMT 운항일이고 KST 하루는 GMT 이틀에 걸친다 —
+  // 전날·당일 운항일을 합쳐 받아 KST 출발 날짜가 화면 날짜인 편만 남긴다
   useEffect(() => {
     let alive = true
     setFleet(null)
-    fetchFlights(date)
-      .then((rows) => { if (alive) { setFleet(mapFlights(rows)); setApiErr(null) } })
+    Promise.all([fetchFlights(shiftDate(date, -1)), fetchFlights(date)])
+      .then(([prev, cur]) => {
+        if (!alive) return
+        const rows = [...(prev ?? []), ...(cur ?? [])].filter((f) => kstDateOf(f.scheduledDepartureUtc) === date)
+        setFleet(mapFlights(rows))
+        setApiErr(null)
+      })
       .catch((e) => { if (alive) { setFleet(FLEET); setApiErr(e) } })
     return () => { alive = false }
   }, [date])
-
-  // 운항일 이동 — GMT 기준이라 날짜 산술도 UTC 도메인에서 한다
-  const stepDate = (delta) => {
-    const [y, m, d] = date.split('-').map(Number)
-    setDate(new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10))
-  }
 
   const aircraft = Object.keys(fleet ?? {})
   const reg = regSel && aircraft.includes(regSel) ? regSel : aircraft[0]
@@ -181,7 +189,7 @@ function FlightOpsPage() {
     <section>
       <div className="fo-head">
         <span className="fo-title">실시간 운항</span>
-        {/* 운항일 스테퍼 — 앱 공통 문법 (‹ 날짜 ›), GMT 운항일 기준 */}
+        {/* 날짜 스테퍼 — 앱 공통 문법 (‹ 날짜 ›), KST 달력일 기준 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button type="button" className="fo-navbtn" onClick={() => stepDate(-1)}>
             <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
@@ -192,7 +200,6 @@ function FlightOpsPage() {
           <button type="button" className="fo-navbtn" onClick={() => stepDate(1)}>
             <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
           </button>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#B6B6C2' }}>GMT 운항일</span>
         </div>
       </div>
 

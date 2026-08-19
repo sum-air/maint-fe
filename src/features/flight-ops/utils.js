@@ -94,9 +94,9 @@ export function mapFlights(rows) {
     const delay = Math.max(0, f.departureDelayMinutes ?? 0)
     const st = f.status === 'SCHEDULED' && delay > 0 ? '지연' : (STATUS_TO_ST[f.status] ?? '예정')
 
-    // 진행률·예상 도착 — 실제 출발(없으면 계획)과 지연 반영 도착 예정으로 계산
+    // 진행률 — 실제 출발(없으면 계획)과 예상 도착(백엔드 제공) 사이에서 현재 시각 위치
     const depMs = Date.parse(f.actualRampOutUtc ?? f.actualTakeOffUtc ?? f.scheduledDepartureUtc)
-    const arrMs = Date.parse(f.scheduledArrivalUtc) + delay * 60000
+    const arrMs = Date.parse(f.estimatedArrivalUtc ?? f.scheduledArrivalUtc) + (f.estimatedArrivalUtc ? 0 : delay * 60000)
     const cur = st === '운항중'
     const pct = cur && arrMs > depMs
       ? Math.min(98, Math.max(2, Math.round(((Date.now() - depMs) / (arrMs - depMs)) * 100)))
@@ -109,10 +109,11 @@ export function mapFlights(rows) {
       sta: kstHM(f.scheduledArrivalUtc),
       ad: kstHM(f.actualRampOutUtc ?? f.actualTakeOffUtc),
       aa: kstHM(f.actualRampInUtc),
-      eta: cur ? kstHM(new Date(arrMs).toISOString()) : '',
+      eta: cur ? kstHM(f.estimatedArrivalUtc ?? new Date(arrMs).toISOString()) : '',
       st,
       pct,
       dl: f.irregularityCode ?? '',
+      spot: f.arrivalSpot ?? f.departureSpot ?? '', // 도착 주기장 우선 (FUEL 호버 툴팁)
     }
     ;(byReg[f.registration ?? '미지정'] ??= []).push(leg)
   }

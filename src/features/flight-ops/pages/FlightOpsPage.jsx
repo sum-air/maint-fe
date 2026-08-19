@@ -150,13 +150,22 @@ function FlightOpsPage() {
   const [arrF, setArrF] = useState(null) // 도착 공항 필터
   const [openMenu, setOpenMenu] = useState(null) // 'dep' | 'arr' | null
 
+  const [date, setDate] = useState(todayGmt) // GMT 운항일 (YYYY-MM-DD) — 백엔드 날짜 키와 같은 기준
+
   useEffect(() => {
     let alive = true
-    fetchFlights(todayGmt())
-      .then((rows) => { if (alive) setFleet(mapFlights(rows)) })
+    setFleet(null)
+    fetchFlights(date)
+      .then((rows) => { if (alive) { setFleet(mapFlights(rows)); setApiErr(null) } })
       .catch((e) => { if (alive) { setFleet(FLEET); setApiErr(e) } })
     return () => { alive = false }
-  }, [])
+  }, [date])
+
+  // 운항일 이동 — GMT 기준이라 날짜 산술도 UTC 도메인에서 한다
+  const stepDate = (delta) => {
+    const [y, m, d] = date.split('-').map(Number)
+    setDate(new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10))
+  }
 
   const aircraft = Object.keys(fleet ?? {})
   const reg = regSel && aircraft.includes(regSel) ? regSel : aircraft[0]
@@ -172,6 +181,19 @@ function FlightOpsPage() {
     <section>
       <div className="fo-head">
         <span className="fo-title">실시간 운항</span>
+        {/* 운항일 스테퍼 — 앱 공통 문법 (‹ 날짜 ›), GMT 운항일 기준 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button type="button" className="fo-navbtn" onClick={() => stepDate(-1)}>
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <span style={{ fontFamily: MONO, fontSize: 13.5, fontWeight: 800, minWidth: 78, textAlign: 'center' }}>
+            {Number(date.slice(5, 7))}월 {Number(date.slice(8, 10))}일
+          </span>
+          <button type="button" className="fo-navbtn" onClick={() => stepDate(1)}>
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#B6B6C2' }}>GMT 운항일</span>
+        </div>
       </div>
 
       {apiErr && (

@@ -372,3 +372,28 @@
   border-radius: 50%;
   flex: none;
 }
+
+/* 운항일 스테퍼 버튼 (앱 공통 스테퍼 문법) */
+.fo-navbtn {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #E5E5EC;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6E6E80;
+}
+.fo-navbtn:hover {
+  background: #F0F0F5;
+}
+.fo-navbtn svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

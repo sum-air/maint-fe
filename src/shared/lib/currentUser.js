@@ -1,6 +1,8 @@
 // 현재 로그인 사용자 — 앱 시작 시 atlas GET /employees/me 로 채워진다 (Layout 의 loadMe).
-// 아래 값은 API 응답 전/실패 시의 폴백. isAdmin 은 ERP 응답에 아직 없어 하드코딩 유지.
+// 아래 값은 API 응답 전/실패 시의 폴백.
 // ※ 프론트의 isAdmin 은 화면 노출 제어용일 뿐, 실제 데이터 보호는 백엔드 권한 검사가 담당해야 한다.
+import { getTokenClaims } from './auth.js'
+
 export const CURRENT_USER = {
   name: '김기홍',
   team: '섬에어 정비기획팀',
@@ -8,7 +10,8 @@ export const CURRENT_USER = {
   initial: '김',
   email: 'kihong.kim@sumair.kr',
   employeeNo: '',
-  isAdmin: true,
+  // 토큰의 features 기준 — 로그인·dev 토큰 모두 access 토큰에 features 클레임이 실린다
+  isAdmin: (getTokenClaims().features ?? []).includes('TENANT_ADMIN'),
 }
 
 // /employees/me 응답을 CURRENT_USER 에 반영 — 로그인/전역 상태 도입 전의 브리지.

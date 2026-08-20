@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { CURRENT_USER as USER, applyMe } from '../lib/currentUser.js'
 import { fetchMe } from '../lib/employees.js'
+import { logout } from '../lib/auth.js'
 
 // 공통 틀: 상단 헤더(로고 + 브레드크럼 + 사용자 영역) + 왼쪽 사이드바(메뉴) + 콘텐츠.
 // 사이드바는 평소 아이콘만(76px), 마우스를 올리면 펼쳐진다(216px).
@@ -113,8 +114,7 @@ function Header() {
                   <span className="hd__menu-name">{USER.name} · {USER.role}</span>
                   <span className="hd__menu-email">{USER.email}</span>
                 </div>
-                {/* 로그인 연동 전 — 자리만; 로그인이 붙으면 세션 종료로 연결 */}
-                <button type="button" className="hd__menu-item" onClick={() => setMenuOpen(false)}>
+                <button type="button" className="hd__menu-item" onClick={logout}>
                   로그아웃
                 </button>
               </div>

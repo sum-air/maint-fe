@@ -6,8 +6,14 @@ import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
 import { TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import { fetchEmployees } from '../../../shared/lib/employees.js'
-import { fetchDutyAssignments, saveDutyAssignments } from '../../../shared/lib/roster.js'
+import { fetchDutyAssignments, saveDutyAssignments, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
+import { getTokenClaims } from '../../../shared/lib/api.js'
 import './schedule.css'
+
+// 내 신원 — 토큰 클레임에서 읽는다 (UI 노출 판단용, 강제는 서버가 한다)
+const ME = getTokenClaims()
+const IS_ADMIN = (ME.features ?? []).includes('TENANT_ADMIN')
+const SCOPE_MESSAGE = '본인 근무 또는 지정받은 팀의 근무만 수정할 수 있습니다.'
 
 // 기준 달 = 오늘
 const TODAY = new Date()
@@ -71,6 +77,7 @@ function SchedulePage() {
         setPeople(maint.map((e) => ({
           id: e.id, // 근무 배정 저장 시 employeeId 로 보낸다
           team: e.departmentName,
+          departmentId: e.departmentId, // 편집 범위(지정 부서) 판단용
           name: e.koreanName,
           role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
           employeeNo: e.employeeNo,
@@ -83,6 +90,22 @@ function SchedulePage() {
   const roster = people ?? []
   // people 이 이미 팀 순서로 정렬돼 있으므로 등장 순서가 곧 팀 표시 순서다
   const teams = people ? [...new Set(people.map((p) => p.team))] : []
+
+  // 내가 근무표를 편집할 수 있는 부서 — 조회 실패 시 본인 것만 (닫히는 쪽으로 동작)
+  const [managedDeptIds, setManagedDeptIds] = useState(() => new Set())
+  useEffect(() => {
+    let alive = true
+    fetchMyRosterScopes()
+      .then((list) => { if (alive) setManagedDeptIds(new Set(list.map((m) => m.departmentId))) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const canEdit = (pi) => {
+    const p = roster[pi]
+    if (!p) return false
+    return IS_ADMIN || p.employeeNo === ME.employeeNo || managedDeptIds.has(p.departmentId)
+  }
 
   const dt = new Date(BASE.year, BASE.month + monthOffset, 1)
   const year = dt.getFullYear()
@@ -125,7 +148,14 @@ function SchedulePage() {
 
   // 셀 변경을 서버에 반영하고, 성공하면 로컬 상태를 갱신한다.
   // updates: { `${pi}_${d}`: { code, hours } } — code null 은 그 셀의 배정 삭제.
-  const persistCells = (updates) => {
+  // 편집 범위 밖의 셀은 걸러 보낸다 — 하나라도 섞이면 서버가 전체를 거절하기 때문.
+  const persistCells = (raw) => {
+    const updates = Object.fromEntries(
+      Object.entries(raw).filter(([key]) => canEdit(Number(key.split('_')[0]))))
+    if (Object.keys(updates).length === 0) {
+      alert(SCOPE_MESSAGE)
+      return
+    }
     const items = Object.entries(updates).map(([key, v]) => {
       const [pi, d] = key.split('_').map(Number)
       return {
@@ -158,6 +188,10 @@ function SchedulePage() {
   }
 
   const openEdit = (cell) => {
+    if (!canEdit(cell.pi)) {
+      alert(SCOPE_MESSAGE)
+      return
+    }
     const dow = WEEK[new Date(year, month, cell.d).getDay()]
     setEditing({ ...cell, dateLabel: `${month + 1}월 ${cell.d}일 (${dow})` })
     setEditSel(cell.code || null)

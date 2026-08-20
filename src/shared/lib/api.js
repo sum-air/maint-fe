@@ -18,6 +18,17 @@ export function getToken() {
   return raw.trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').replace(/\s+/g, '')
 }
 
+// 토큰 payload(사번·features)를 읽는다 — 로그인 플로우 전까지 화면이 "내가 누구인가"를 아는 경로.
+// 서명 검증은 서버 몫이라 여기서 읽는 값은 UI 노출 판단에만 쓴다. 실제 권한 강제는 항상 서버가 한다.
+export function getTokenClaims() {
+  try {
+    const payload = getToken().split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    return JSON.parse(atob(payload + '='.repeat((4 - (payload.length % 4)) % 4)))
+  } catch {
+    return {}
+  }
+}
+
 /** 백엔드가 실패를 항상 { code, message } 로 준다. code 로 분기하고 message 는 보여주기만 한다. */
 export class ApiError extends Error {
   constructor(status, code, message) {

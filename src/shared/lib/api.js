@@ -3,31 +3,19 @@
 // 개발에서는 vite 프록시(`/atlas` → atlas)를 거친다. atlas 가 CORS 를 열어두지
 // 않았고, 같은 오리진으로 보내면 그 문제가 아예 생기지 않기 때문이다.
 //
-// 인증: atlas 는 Bearer access token 을 요구한다. 로그인 화면이 아직 없어서
-// 지금은 localStorage 의 `atlas.accessToken` 을 쓴다 — currentUser.js 를
-// 하드코딩해 둔 것과 같은 임시 조치다. 로그인이 붙으면 그 흐름이 이 값을 채운다.
-const BASE_URL = import.meta.env.VITE_ATLAS_BASE_URL ?? '/atlas'
+// 인증: Bearer access 토큰. 세션(로그인·갱신·로그아웃)은 auth.js 가 담당하고,
+// 여기서는 401 을 받으면 한 번 갱신해 재시도한다. 갱신까지 실패하면 세션을 지우고
+// 로그인 화면으로 보낸다.
+import {
+  BASE_URL,
+  clearSession,
+  getToken,
+  hasRefreshSession,
+  refreshTokens,
+} from './auth.js'
 
-export const TOKEN_KEY = 'atlas.accessToken'
-
-export function getToken() {
-  const raw = localStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_ATLAS_TOKEN ?? ''
-  // 복사·붙여넣기로 섞여 들어오는 따옴표·"Bearer " 접두어·공백·개행 제거.
-  // 개행이 남으면 Safari 가 Authorization 헤더에서
-  // "The string did not match the expected pattern" 을 던지며 요청 자체가 실패한다.
-  return raw.trim().replace(/^["']|["']$/g, '').replace(/^Bearer\s+/i, '').replace(/\s+/g, '')
-}
-
-// 토큰 payload(사번·features)를 읽는다 — 로그인 플로우 전까지 화면이 "내가 누구인가"를 아는 경로.
-// 서명 검증은 서버 몫이라 여기서 읽는 값은 UI 노출 판단에만 쓴다. 실제 권한 강제는 항상 서버가 한다.
-export function getTokenClaims() {
-  try {
-    const payload = getToken().split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-    return JSON.parse(atob(payload + '='.repeat((4 - (payload.length % 4)) % 4)))
-  } catch {
-    return {}
-  }
-}
+// 기존 사용처 호환 — 토큰 원시 접근은 auth.js 로 옮겼다
+export { TOKEN_KEY, getToken, getTokenClaims } from './auth.js'
 
 /** 백엔드가 실패를 항상 { code, message } 로 준다. code 로 분기하고 message 는 보여주기만 한다. */
 export class ApiError extends Error {
@@ -38,40 +26,46 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiGet(path, params) {
+async function send(path, { method = 'GET', params, body } = {}) {
   const url = new URL(`${BASE_URL}${path}`, window.location.origin)
   Object.entries(params ?? {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v)
   })
 
-  const token = getToken()
-  const res = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
+  const doFetch = () => {
+    const token = getToken()
+    return fetch(url, {
+      method,
+      headers: {
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  }
+
+  let res = await doFetch()
+
+  // access 만료 → 갱신 후 한 번만 재시도. refresh 가 없으면(dev 환경변수 토큰) 그대로 실패.
+  if (res.status === 401 && hasRefreshSession()) {
+    try {
+      await refreshTokens()
+    } catch {
+      clearSession()
+      window.location.replace('/login')
+      throw new ApiError(401, 'UNAUTHENTICATED', '세션이 만료되었습니다. 다시 로그인해주세요.')
+    }
+    res = await doFetch()
+  }
 
   if (!res.ok) {
     // 본문이 비어 있거나 JSON 이 아닐 수 있다 (프록시 오류 등)
-    const body = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, body.code ?? 'UNKNOWN', body.message ?? `요청 실패 (${res.status})`)
-  }
-  return res.json()
-}
-
-export async function apiPut(path, body) {
-  const url = new URL(`${BASE_URL}${path}`, window.location.origin)
-  const token = getToken()
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  })
-
-  if (!res.ok) {
     const errBody = await res.json().catch(() => ({}))
     throw new ApiError(res.status, errBody.code ?? 'UNKNOWN', errBody.message ?? `요청 실패 (${res.status})`)
   }
   return res.json()
 }
+
+export const apiGet = (path, params) => send(path, { params })
+
+export const apiPut = (path, body) => send(path, { method: 'PUT', body })

@@ -12,6 +12,9 @@ import './schedule.css'
 const TODAY = new Date()
 const BASE = { year: TODAY.getFullYear(), month: TODAY.getMonth() }
 
+// 단축키 안내용 수정키 표기 — 동작은 Cmd/Ctrl 둘 다 받지만(metaKey||ctrlKey) 표기는 OS 를 따른다
+const MOD_KEY = /Mac|iP(hone|ad|od)/.test(navigator.platform) ? '⌘' : 'Ctrl'
+
 // 팀별 수동 표시 순서 (사번) — 직급·이름으로 도출되지 않는 팀 내 관행 순서.
 // 여기 없는 인원은 직급 서열 → 이름순으로 목록 뒤에 붙는다. 인사이동 시 갱신 필요.
 const MEMBER_ORDER = {
@@ -284,7 +287,7 @@ function SchedulePage() {
                 onPaste={(updates) => setOverrides((s) => ({ ...s, ...updates }))}
               />
               <div className="sched-hint">
-                클릭/드래그 = 선택 (Ctrl+클릭 다중 · Shift+클릭 범위) · Ctrl+C 복사 · Ctrl+V 붙여넣기 · 더블클릭 = 편집
+                {`클릭/드래그 = 선택 (${MOD_KEY}+클릭 다중 · Shift+클릭 범위) · ${MOD_KEY}+C 복사 · ${MOD_KEY}+V 붙여넣기 · 더블클릭 = 편집`}
               </div>
             </>
           ) : (

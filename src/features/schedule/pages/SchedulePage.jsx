@@ -31,7 +31,6 @@ function SchedulePage() {
 
   // 인원 축 실데이터 — atlas /employees (ERP 동기화 사본). 근무 코드는 아직 백엔드 원천이
   // 없어 데모 생성(pickCode)을 그대로 쓴다. 실패 시 데모 로스터 유지 (Layout 의 fetchMe 와 같은 폴백).
-  // 직급은 ERP 응답에 없어(백엔드 협의 중) 실데이터 모드에선 표시하지 않는다.
   const [people, setPeople] = useState(null)
   useEffect(() => {
     let alive = true
@@ -40,7 +39,12 @@ function SchedulePage() {
         if (!alive) return
         const maint = list.filter((e) => e.departmentName?.includes('정비'))
         if (maint.length) {
-          setPeople(maint.map((e) => ({ team: e.departmentName, name: e.koreanName, employeeNo: e.employeeNo })))
+          setPeople(maint.map((e) => ({
+            team: e.departmentName,
+            name: e.koreanName,
+            role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
+            employeeNo: e.employeeNo,
+          })))
         }
       })
       .catch(() => {})

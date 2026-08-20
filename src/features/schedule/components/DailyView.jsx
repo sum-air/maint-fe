@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { CODE_CAT, CAT, BADGE, TIMES, MONO, pickCode } from '../../../shared/lib/workCodes.js'
+import { CODE_CAT, CAT, BADGE, TIMES, MONO } from '../../../shared/lib/workCodes.js'
 
 // 일간 스케줄 간트 타임라인 — 클로드 디자인 "정비본부 일간 스케줄 (화면)" 포팅.
 // 왼쪽 고정 이름 열 + 가로 스크롤 24시간 트랙. 근무는 시작~종료 위치의 색 막대.
-// 월간 뷰와 같은 데이터 소스(pickCode + overrides)를 쓴다.
+// 월간 뷰와 같은 데이터 소스(overrides)를 쓴다.
 
 // 한 화면에 약 14시간이 보이도록 시간 폭을 화면 크기에 맞춰 계산 (최소 56px)
 // → 타임라인이 항상 화면보다 넓어서 스크롤이 생기고, 현재 시각을 중앙에 둘 수 있다
@@ -18,8 +18,9 @@ const PIN = '#EA8A0C' // 행 고정 강조색 (월간과 동일)
 const PIN_TINT = 'rgba(234,138,12,0.10)'
 const PIN_BG = '#FDF0DA'
 
-// roster/teams 는 SchedulePage 가 내려준다 (실데이터 또는 데모 폴백).
-function DailyView({ roster, teams, year, month, day, hasData, overrides }) {
+// roster/teams 는 SchedulePage 가 내려준다. 근무 코드는 백엔드 연동 전이라
+// 편집 모달로 채운 로컬 overrides 만 표시한다.
+function DailyView({ roster, teams, year, month, day, overrides }) {
   const [collapsed, setCollapsed] = useState({})
   const [hover, setHover] = useState(null)
   const scrollRef = useRef(null)
@@ -150,9 +151,7 @@ function DailyView({ roster, teams, year, month, day, hasData, overrides }) {
     ].filter(Boolean).join(', ')
   }
 
-  const dow = new Date(year, month, day).getDay()
-
-  // 현재 시각 (빨간 세로선) — 데모 데이터라 날짜와 무관하게 현재 벽시계 기준
+  // 현재 시각 (빨간 세로선) — 날짜와 무관하게 현재 벽시계 기준
   const now = new Date()
   const nowFrac = (now.getHours() + now.getMinutes() / 60) / 24
   const nowLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
@@ -167,7 +166,7 @@ function DailyView({ roster, teams, year, month, day, hasData, overrides }) {
   const codeOf = (pi) => {
     const ov = overrides[`${pi}_${day}`]
     if (ov?.code) return { code: ov.code, hours: ov.hours }
-    return { code: hasData ? pickCode(pi, day, dow) : null }
+    return { code: null }
   }
 
   const showPop = (pop, e) => {

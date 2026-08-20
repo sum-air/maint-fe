@@ -4,12 +4,13 @@ import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
 import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
-import { ROSTER, TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
+import { TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import { fetchEmployees } from '../../../shared/lib/employees.js'
 import './schedule.css'
 
-// 임시 데이터가 있는 기준 달 (백엔드 연동 전)
-const BASE = { year: 2026, month: 6 } // 2026년 7월
+// 기준 달 = 오늘
+const TODAY = new Date()
+const BASE = { year: TODAY.getFullYear(), month: TODAY.getMonth() }
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -27,11 +28,12 @@ function SchedulePage() {
   const [overrides, setOverrides] = useState({})
   const [hiCode, setHiCode] = useState(null)
 
-  const [selDay, setSelDay] = useState(9) // 일간 뷰에서 보는 날짜 (임시 데이터 기준일)
+  const [selDay, setSelDay] = useState(TODAY.getDate()) // 일간 뷰에서 보는 날짜
 
-  // 인원 축 실데이터 — atlas /employees (ERP 동기화 사본). 근무 코드는 아직 백엔드 원천이
-  // 없어 데모 생성(pickCode)을 그대로 쓴다. 실패 시 데모 로스터 유지 (Layout 의 fetchMe 와 같은 폴백).
+  // 인원 축 실데이터 — atlas /employees (ERP 동기화 사본). 근무 코드는 아직 백엔드
+  // 원천이 없어 셀은 비워둔다 (편집 모달로 채우는 로컬 overrides 만 표시).
   const [people, setPeople] = useState(null)
+  const [loadError, setLoadError] = useState(false)
   useEffect(() => {
     let alive = true
     fetchEmployees({ status: 'ACTIVE' })
@@ -39,37 +41,34 @@ function SchedulePage() {
         if (!alive) return
         // 정비본부(본부장)는 스케줄 대상이 아니라 제외
         const maint = list.filter((e) => e.departmentName?.includes('정비') && e.departmentName !== '정비본부')
-        if (maint.length) {
-          // 배열을 팀 순서(TEAMS)대로 묶어서 정렬 — 행 인덱스(pi) 기반 범위선택·고정이
-          // 화면 인접 행 = 인접 인덱스를 전제하므로 표시 순서와 배열 순서가 같아야 한다.
-          // 팀 안에서는 직급 서열(ERP grade.code 오름차순 = 부장→차장→과장→대리→사원),
-          // 같은 직급이면 이름순. 직급 미입력자는 맨 뒤.
-          const rank = (t) => { const i = TEAMS.indexOf(t); return i === -1 ? TEAMS.length : i }
-          const gradeRank = (e) => Number(e.grade?.code) || 999
-          maint.sort((a, b) =>
-            rank(a.departmentName) - rank(b.departmentName) ||
-            gradeRank(a) - gradeRank(b) ||
-            a.koreanName.localeCompare(b.koreanName, 'ko'))
-          setPeople(maint.map((e) => ({
-            team: e.departmentName,
-            name: e.koreanName,
-            role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
-            employeeNo: e.employeeNo,
-          })))
-        }
+        // 배열을 팀 순서(TEAMS)대로 묶어서 정렬 — 행 인덱스(pi) 기반 범위선택·고정이
+        // 화면 인접 행 = 인접 인덱스를 전제하므로 표시 순서와 배열 순서가 같아야 한다.
+        // 팀 안에서는 직급 서열(ERP grade.code 오름차순 = 부장→차장→과장→대리→사원),
+        // 같은 직급이면 이름순. 직급 미입력자는 맨 뒤.
+        const rank = (t) => { const i = TEAMS.indexOf(t); return i === -1 ? TEAMS.length : i }
+        const gradeRank = (e) => Number(e.grade?.code) || 999
+        maint.sort((a, b) =>
+          rank(a.departmentName) - rank(b.departmentName) ||
+          gradeRank(a) - gradeRank(b) ||
+          a.koreanName.localeCompare(b.koreanName, 'ko'))
+        setPeople(maint.map((e) => ({
+          team: e.departmentName,
+          name: e.koreanName,
+          role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
+          employeeNo: e.employeeNo,
+        })))
       })
-      .catch(() => {})
+      .catch(() => { if (alive) setLoadError(true) })
     return () => { alive = false }
   }, [])
 
-  const roster = people ?? ROSTER
+  const roster = people ?? []
   // people 이 이미 팀 순서로 정렬돼 있으므로 등장 순서가 곧 팀 표시 순서다
-  const teams = people ? [...new Set(people.map((p) => p.team))] : TEAMS
+  const teams = people ? [...new Set(people.map((p) => p.team))] : []
 
   const dt = new Date(BASE.year, BASE.month + monthOffset, 1)
   const year = dt.getFullYear()
   const month = dt.getMonth()
-  const hasData = monthOffset === 0
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const day = Math.min(selDay, daysInMonth)
   const monthTitle = `${year}년 ${month + 1}월`
@@ -256,25 +255,32 @@ function SchedulePage() {
       {/* 월간 히트맵 */}
       {view === 'month' && (
         <div style={{ marginTop: 18 }}>
-          <MonthHeatmap
-            key={`${year}-${month}`} // 월이 바뀌면 행/열 고정 상태 초기화
-            roster={roster}
-            teams={teams}
-            year={year}
-            month={month}
-            hasData={hasData}
-            collapsed={collapsed}
-            onToggleTeam={(team) => setCollapsed((s) => ({ ...s, [team]: !s[team] }))}
-            hiCode={hiCode}
-            overrides={overrides}
-            onCellHover={showPop}
-            onCellLeave={() => setHover(null)}
-            onCellClick={openEdit}
-            onPaste={(updates) => setOverrides((s) => ({ ...s, ...updates }))}
-          />
-          <div className="sched-hint">
-            클릭/드래그 = 선택 (Ctrl+클릭 다중 · Shift+클릭 범위) · Ctrl+C 복사 · Ctrl+V 붙여넣기 · 더블클릭 = 편집
-          </div>
+          {people ? (
+            <>
+              <MonthHeatmap
+                key={`${year}-${month}`} // 월이 바뀌면 행/열 고정 상태 초기화
+                roster={roster}
+                teams={teams}
+                year={year}
+                month={month}
+                collapsed={collapsed}
+                onToggleTeam={(team) => setCollapsed((s) => ({ ...s, [team]: !s[team] }))}
+                hiCode={hiCode}
+                overrides={overrides}
+                onCellHover={showPop}
+                onCellLeave={() => setHover(null)}
+                onCellClick={openEdit}
+                onPaste={(updates) => setOverrides((s) => ({ ...s, ...updates }))}
+              />
+              <div className="sched-hint">
+                클릭/드래그 = 선택 (Ctrl+클릭 다중 · Shift+클릭 범위) · Ctrl+C 복사 · Ctrl+V 붙여넣기 · 더블클릭 = 편집
+              </div>
+            </>
+          ) : (
+            <div className="hm sched-empty">
+              {loadError ? '직원 정보를 불러오지 못했습니다 — 백엔드(atlas) 연결을 확인해주세요.' : '직원 정보를 불러오는 중…'}
+            </div>
+          )}
         </div>
       )}
 
@@ -288,7 +294,13 @@ function SchedulePage() {
       {/* 일간 간트 타임라인 */}
       {view === 'daily' && (
         <div style={{ marginTop: 18 }}>
-          <DailyView roster={roster} teams={teams} year={year} month={month} day={day} hasData={hasData} overrides={overrides} />
+          {people ? (
+            <DailyView roster={roster} teams={teams} year={year} month={month} day={day} overrides={overrides} />
+          ) : (
+            <div className="hm sched-empty">
+              {loadError ? '직원 정보를 불러오지 못했습니다 — 백엔드(atlas) 연결을 확인해주세요.' : '직원 정보를 불러오는 중…'}
+            </div>
+          )}
         </div>
       )}
 

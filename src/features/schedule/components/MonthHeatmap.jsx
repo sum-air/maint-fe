@@ -86,10 +86,11 @@ function MonthHeatmap({ roster, teams, year, month, collapsed, onToggleTeam, hiC
   useEffect(() => {
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey
-      if (mod && e.key === 'c' && anchor) {
+      // e.key 는 한글 입력 상태에서 'ㅊ'/'ㅍ' 로 들어와 매칭이 안 된다 — 물리 키 기준 e.code 사용
+      if (mod && e.code === 'KeyC' && anchor) {
         const code = codeAt(anchor.pi, anchor.d)
         if (code) clipRef.current = { code, hours: overrides[cellKey(anchor.pi, anchor.d)]?.hours }
-      } else if (mod && e.key === 'v' && clipRef.current && selected.size) {
+      } else if (mod && e.code === 'KeyV' && clipRef.current && selected.size) {
         const updates = {}
         selected.forEach((k) => { updates[k] = { ...clipRef.current } })
         onPaste(updates)

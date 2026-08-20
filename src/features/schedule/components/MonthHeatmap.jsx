@@ -19,7 +19,7 @@ function MonthHeatmap({ roster, teams, year, month, collapsed, onToggleTeam, hiC
   const cellKey = (pi, d) => `${pi}_${d}`
   const [selected, setSelected] = useState(() => new Set())
   const [anchor, setAnchor] = useState(null)
-  const clipRef = useRef(null) // Ctrl+C 로 복사한 { code, hours }
+  const clipRef = useRef(null) // 복사한 { code, hours } — code null 은 빈 셀 (붙여넣으면 지워짐)
   const dragRef = useRef(null) // 드래그 중: { pi, d, moved }
   const suppressClickRef = useRef(false) // 드래그 직후 따라오는 click 무시
 
@@ -88,8 +88,11 @@ function MonthHeatmap({ roster, teams, year, month, collapsed, onToggleTeam, hiC
       const mod = e.metaKey || e.ctrlKey
       // e.key 는 한글 입력 상태에서 'ㅊ'/'ㅍ' 로 들어와 매칭이 안 된다 — 물리 키 기준 e.code 사용
       if (mod && e.code === 'KeyC' && anchor) {
-        const code = codeAt(anchor.pi, anchor.d)
-        if (code) clipRef.current = { code, hours: overrides[cellKey(anchor.pi, anchor.d)]?.hours }
+        // 빈 셀도 복사된다 (code null) — 붙여넣으면 대상 셀이 지워진다 (엑셀과 동일)
+        clipRef.current = {
+          code: codeAt(anchor.pi, anchor.d),
+          hours: overrides[cellKey(anchor.pi, anchor.d)]?.hours,
+        }
       } else if (mod && e.code === 'KeyV' && clipRef.current && selected.size) {
         const updates = {}
         selected.forEach((k) => { updates[k] = { ...clipRef.current } })

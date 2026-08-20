@@ -37,8 +37,19 @@ function SchedulePage() {
     fetchEmployees({ status: 'ACTIVE' })
       .then((list) => {
         if (!alive) return
-        const maint = list.filter((e) => e.departmentName?.includes('정비'))
+        // 정비본부(본부장)는 스케줄 대상이 아니라 제외
+        const maint = list.filter((e) => e.departmentName?.includes('정비') && e.departmentName !== '정비본부')
         if (maint.length) {
+          // 배열을 팀 순서(TEAMS)대로 묶어서 정렬 — 행 인덱스(pi) 기반 범위선택·고정이
+          // 화면 인접 행 = 인접 인덱스를 전제하므로 표시 순서와 배열 순서가 같아야 한다.
+          // 팀 안에서는 직급 서열(ERP grade.code 오름차순 = 부장→차장→과장→대리→사원),
+          // 같은 직급이면 이름순. 직급 미입력자는 맨 뒤.
+          const rank = (t) => { const i = TEAMS.indexOf(t); return i === -1 ? TEAMS.length : i }
+          const gradeRank = (e) => Number(e.grade?.code) || 999
+          maint.sort((a, b) =>
+            rank(a.departmentName) - rank(b.departmentName) ||
+            gradeRank(a) - gradeRank(b) ||
+            a.koreanName.localeCompare(b.koreanName, 'ko'))
           setPeople(maint.map((e) => ({
             team: e.departmentName,
             name: e.koreanName,
@@ -52,6 +63,7 @@ function SchedulePage() {
   }, [])
 
   const roster = people ?? ROSTER
+  // people 이 이미 팀 순서로 정렬돼 있으므로 등장 순서가 곧 팀 표시 순서다
   const teams = people ? [...new Set(people.map((p) => p.team))] : TEAMS
 
   const dt = new Date(BASE.year, BASE.month + monthOffset, 1)

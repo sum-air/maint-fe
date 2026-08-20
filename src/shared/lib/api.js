@@ -45,3 +45,22 @@ export async function apiGet(path, params) {
   }
   return res.json()
 }
+
+export async function apiPut(path, body) {
+  const url = new URL(`${BASE_URL}${path}`, window.location.origin)
+  const token = getToken()
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, errBody.code ?? 'UNKNOWN', errBody.message ?? `요청 실패 (${res.status})`)
+  }
+  return res.json()
+}

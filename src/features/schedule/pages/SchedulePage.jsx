@@ -6,6 +6,7 @@ import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
 import { TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import { fetchEmployees } from '../../../shared/lib/employees.js'
+import { fetchDutyAssignments, saveDutyAssignments } from '../../../shared/lib/roster.js'
 import './schedule.css'
 
 // 기준 달 = 오늘
@@ -34,7 +35,9 @@ function SchedulePage() {
   const [editing, setEditing] = useState(null)
   const [editSel, setEditSel] = useState(null)
   const [editHours, setEditHours] = useState('') // EC(0) 긴급호출 근무 시간
-  const [overrides, setOverrides] = useState({})
+  // 근무 셀 — atlas /duty-assignments 실데이터. 키는 `${pi}_${d}` (컴포넌트들의 기존 키 체계 유지)
+  const [cells, setCells] = useState({})
+  const [dutyError, setDutyError] = useState(false)
   const [hiCode, setHiCode] = useState(null)
 
   const [selDay, setSelDay] = useState(TODAY.getDate()) // 일간 뷰에서 보는 날짜
@@ -66,6 +69,7 @@ function SchedulePage() {
           gradeRank(a) - gradeRank(b) ||
           a.koreanName.localeCompare(b.koreanName, 'ko'))
         setPeople(maint.map((e) => ({
+          id: e.id, // 근무 배정 저장 시 employeeId 로 보낸다
           team: e.departmentName,
           name: e.koreanName,
           role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
@@ -91,6 +95,50 @@ function SchedulePage() {
       ? `${month + 1}월 ${day}일 (${WEEK[new Date(year, month, day).getDay()]})`
       : `${year}.${String(month + 1).padStart(2, '0')}`
   const viewBadge = view === 'daily' ? '일간 스케줄' : view === 'stats' ? '통계 자료' : '월간 스케줄'
+
+  const dateStr = (d) =>
+    `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+  // 보고 있는 달의 근무 배정을 읽어온다. 응답의 사번을 로스터 행 인덱스(pi)로 번역해
+  // 컴포넌트들의 기존 셀 키 체계(`${pi}_${d}`)를 그대로 쓴다.
+  useEffect(() => {
+    if (!people) return
+    let alive = true
+    setCells({})
+    setDutyError(false)
+    const piByNo = new Map(people.map((p, pi) => [p.employeeNo, pi]))
+    fetchDutyAssignments(dateStr(1), dateStr(daysInMonth))
+      .then((list) => {
+        if (!alive) return
+        const next = {}
+        list.forEach((a) => {
+          const pi = piByNo.get(a.employeeNo)
+          if (pi === undefined) return // 화면에 없는 직원(타 부서 등)의 배정
+          next[`${pi}_${Number(a.workDate.slice(8))}`] = { code: a.shiftCode, hours: a.ecHours ?? undefined }
+        })
+        setCells(next)
+      })
+      .catch(() => { if (alive) setDutyError(true) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [people, year, month])
+
+  // 셀 변경을 서버에 반영하고, 성공하면 로컬 상태를 갱신한다.
+  // updates: { `${pi}_${d}`: { code, hours } } — code null 은 그 셀의 배정 삭제.
+  const persistCells = (updates) => {
+    const items = Object.entries(updates).map(([key, v]) => {
+      const [pi, d] = key.split('_').map(Number)
+      return {
+        employeeId: roster[pi].id,
+        workDate: dateStr(d),
+        shiftCode: v.code ?? null,
+        ecHours: v.code === 'EC(0)' && v.hours != null ? v.hours : undefined,
+      }
+    })
+    saveDutyAssignments(items)
+      .then(() => setCells((s) => ({ ...s, ...updates })))
+      .catch((e) => alert(`근무 저장 실패 — ${e.message}`))
+  }
 
   // 셀 호버 팝오버 (디자인 showPop 로직)
   const showPop = ({ p, code, off, ecHours, d }, e) => {
@@ -120,7 +168,7 @@ function SchedulePage() {
   const saveEdit = () => {
     if (editing && editSel) {
       const hours = editSel === 'EC(0)' && editHours !== '' ? Number(editHours) : undefined
-      setOverrides((s) => ({ ...s, [`${editing.pi}_${editing.d}`]: { code: editSel, hours } }))
+      persistCells({ [`${editing.pi}_${editing.d}`]: { code: editSel, hours } })
     }
     setEditing(null)
   }
@@ -271,6 +319,9 @@ function SchedulePage() {
         <div style={{ marginTop: 18 }}>
           {people ? (
             <>
+              {dutyError && (
+                <div className="sched-warn">근무 데이터를 불러오지 못했습니다 — 지금 저장하는 변경은 반영되지 않을 수 있습니다.</div>
+              )}
               <MonthHeatmap
                 key={`${year}-${month}`} // 월이 바뀌면 행/열 고정 상태 초기화
                 roster={roster}
@@ -280,11 +331,11 @@ function SchedulePage() {
                 collapsed={collapsed}
                 onToggleTeam={(team) => setCollapsed((s) => ({ ...s, [team]: !s[team] }))}
                 hiCode={hiCode}
-                overrides={overrides}
+                overrides={cells}
                 onCellHover={showPop}
                 onCellLeave={() => setHover(null)}
                 onCellClick={openEdit}
-                onPaste={(updates) => setOverrides((s) => ({ ...s, ...updates }))}
+                onPaste={persistCells}
               />
               <div className="sched-hint">
                 {`클릭/드래그 = 선택 (${MOD_KEY}+클릭 다중 · Shift+클릭 범위) · ${MOD_KEY}+C 복사 · ${MOD_KEY}+V 붙여넣기 · 더블클릭 = 편집`}
@@ -309,7 +360,12 @@ function SchedulePage() {
       {view === 'daily' && (
         <div style={{ marginTop: 18 }}>
           {people ? (
-            <DailyView roster={roster} teams={teams} year={year} month={month} day={day} overrides={overrides} />
+            <>
+              {dutyError && (
+                <div className="sched-warn">근무 데이터를 불러오지 못했습니다.</div>
+              )}
+              <DailyView roster={roster} teams={teams} year={year} month={month} day={day} overrides={cells} />
+            </>
           ) : (
             <div className="hm sched-empty">
               {loadError ? '직원 정보를 불러오지 못했습니다 — 백엔드(atlas) 연결을 확인해주세요.' : '직원 정보를 불러오는 중…'}

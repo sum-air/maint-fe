@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TEAMS, ROSTER, CODE_CAT, CAT, PAL, pickCode } from '../../../shared/lib/workCodes.js'
+import { CODE_CAT, CAT, PAL, pickCode } from '../../../shared/lib/workCodes.js'
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 const WEEKEND_BG = '#F7F7FC' // 주말 열 틴트
@@ -8,7 +8,8 @@ const PIN_TINT = 'rgba(234,138,12,0.10)'
 const PIN_BG = '#FDF0DA'
 
 // 팀별 근무코드 히트맵 표. 셀 호버 → 팝오버, 셀 클릭 → 근무코드 변경 모달.
-function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, overrides, onCellHover, onCellLeave, onCellClick, onPaste }) {
+// roster/teams 는 SchedulePage 가 내려준다 (실데이터 또는 데모 폴백).
+function MonthHeatmap({ roster, teams, year, month, hasData, collapsed, onToggleTeam, hiCode, overrides, onCellHover, onCellLeave, onCellClick, onPaste }) {
   const days = new Date(year, month + 1, 0).getDate()
   const dow = (d) => new Date(year, month, d).getDay()
 
@@ -110,8 +111,8 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
   // 같은 팀 안에서 연속으로 고정된 행은 하나의 블록 — 구간의 위/아래 끝에만 가로 테두리
   const rowPinned = (pi) => pinRows.includes(pi)
   const rowEdge = (pi) => ({
-    top: rowPinned(pi) && !(rowPinned(pi - 1) && ROSTER[pi - 1]?.team === ROSTER[pi].team),
-    bottom: rowPinned(pi) && !(rowPinned(pi + 1) && ROSTER[pi + 1]?.team === ROSTER[pi].team),
+    top: rowPinned(pi) && !(rowPinned(pi - 1) && roster[pi - 1]?.team === roster[pi].team),
+    bottom: rowPinned(pi) && !(rowPinned(pi + 1) && roster[pi + 1]?.team === roster[pi].team),
   })
 
   // 연속으로 고정된 열은 하나의 블록으로 취급 — 구간의 양 끝에만 세로 테두리를 그린다
@@ -149,8 +150,8 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
     const parts = []
     if (!sel(pi, d - 1)) parts.push('inset 2px 0 0 #6868FF')
     if (!sel(pi, d + 1)) parts.push('inset -2px 0 0 #6868FF')
-    if (!(sel(pi - 1, d) && ROSTER[pi - 1]?.team === ROSTER[pi].team)) parts.push('inset 0 2px 0 #6868FF')
-    if (!(sel(pi + 1, d) && ROSTER[pi + 1]?.team === ROSTER[pi].team)) parts.push('inset 0 -2px 0 #6868FF')
+    if (!(sel(pi - 1, d) && roster[pi - 1]?.team === roster[pi].team)) parts.push('inset 0 2px 0 #6868FF')
+    if (!(sel(pi + 1, d) && roster[pi + 1]?.team === roster[pi].team)) parts.push('inset 0 -2px 0 #6868FF')
     parts.push('inset 0 0 0 999px rgba(104,104,255,.10)')
     return parts
   }
@@ -166,7 +167,7 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
   }
 
   // 로스터 순서 기준 사람 인덱스 (임시 스케줄 생성 키)
-  const persons = ROSTER.map((p, pi) => ({ ...p, pi }))
+  const persons = roster.map((p, pi) => ({ ...p, pi }))
 
   const renderCell = (p, d) => {
     const ovKey = `${p.pi}_${d}`
@@ -271,7 +272,7 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
       </div>
 
       {/* 팀 밴드 + 인원 행 */}
-      {TEAMS.map((team) => {
+      {teams.map((team) => {
         const ppl = persons.filter((p) => p.team === team)
         const open = !collapsed[team]
         return (
@@ -307,7 +308,7 @@ function MonthHeatmap({ year, month, hasData, collapsed, onToggleTeam, hiCode, o
             </div>
             {open &&
               ppl.map((p) => (
-                <div key={p.name} className="hm-row">
+                <div key={p.pi} className="hm-row">
                   <span
                     className="hm-name"
                     style={

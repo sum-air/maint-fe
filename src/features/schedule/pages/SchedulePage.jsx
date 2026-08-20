@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import MonthHeatmap from '../components/MonthHeatmap.jsx'
 import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
 import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
-import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
+import { ROSTER, TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
+import { fetchEmployees } from '../../../shared/lib/employees.js'
 import './schedule.css'
 
 // 임시 데이터가 있는 기준 달 (백엔드 연동 전)
@@ -27,6 +28,31 @@ function SchedulePage() {
   const [hiCode, setHiCode] = useState(null)
 
   const [selDay, setSelDay] = useState(9) // 일간 뷰에서 보는 날짜 (임시 데이터 기준일)
+
+  // 인원 축 실데이터 — atlas /employees (ERP 동기화 사본). 근무 코드는 아직 백엔드 원천이
+  // 없어 데모 생성(pickCode)을 그대로 쓴다. 실패 시 데모 로스터 유지 (Layout 의 fetchMe 와 같은 폴백).
+  const [people, setPeople] = useState(null)
+  useEffect(() => {
+    let alive = true
+    fetchEmployees({ status: 'ACTIVE' })
+      .then((list) => {
+        if (!alive) return
+        const maint = list.filter((e) => e.departmentName?.includes('정비'))
+        if (maint.length) {
+          setPeople(maint.map((e) => ({
+            team: e.departmentName,
+            name: e.koreanName,
+            role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
+            employeeNo: e.employeeNo,
+          })))
+        }
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const roster = people ?? ROSTER
+  const teams = people ? [...new Set(people.map((p) => p.team))] : TEAMS
 
   const dt = new Date(BASE.year, BASE.month + monthOffset, 1)
   const year = dt.getFullYear()
@@ -220,6 +246,8 @@ function SchedulePage() {
         <div style={{ marginTop: 18 }}>
           <MonthHeatmap
             key={`${year}-${month}`} // 월이 바뀌면 행/열 고정 상태 초기화
+            roster={roster}
+            teams={teams}
             year={year}
             month={month}
             hasData={hasData}
@@ -248,7 +276,7 @@ function SchedulePage() {
       {/* 일간 간트 타임라인 */}
       {view === 'daily' && (
         <div style={{ marginTop: 18 }}>
-          <DailyView year={year} month={month} day={day} hasData={hasData} overrides={overrides} />
+          <DailyView roster={roster} teams={teams} year={year} month={month} day={day} hasData={hasData} overrides={overrides} />
         </div>
       )}
 

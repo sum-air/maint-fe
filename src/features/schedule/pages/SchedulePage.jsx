@@ -12,6 +12,12 @@ import './schedule.css'
 const TODAY = new Date()
 const BASE = { year: TODAY.getFullYear(), month: TODAY.getMonth() }
 
+// 팀별 수동 표시 순서 (사번) — 직급·이름으로 도출되지 않는 팀 내 관행 순서.
+// 여기 없는 인원은 직급 서열 → 이름순으로 목록 뒤에 붙는다. 인사이동 시 갱신 필요.
+const MEMBER_ORDER = {
+  운항정비팀: ['200342', '200133', '200454', '200315', '200321', '200272'], // 차면규 문지환 김찬수 오정훈 오명열 김동민
+}
+
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 
 function SchedulePage() {
@@ -47,8 +53,13 @@ function SchedulePage() {
         // 같은 직급이면 이름순. 직급 미입력자는 맨 뒤.
         const rank = (t) => { const i = TEAMS.indexOf(t); return i === -1 ? TEAMS.length : i }
         const gradeRank = (e) => Number(e.grade?.code) || 999
+        const memberRank = (e) => {
+          const i = MEMBER_ORDER[e.departmentName]?.indexOf(e.employeeNo) ?? -1
+          return i === -1 ? 9999 : i
+        }
         maint.sort((a, b) =>
           rank(a.departmentName) - rank(b.departmentName) ||
+          memberRank(a) - memberRank(b) ||
           gradeRank(a) - gradeRank(b) ||
           a.koreanName.localeCompare(b.koreanName, 'ko'))
         setPeople(maint.map((e) => ({

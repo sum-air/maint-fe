@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { TEAMS, ROSTER, CODE_CAT, CAT, BADGE, TIMES, MONO, pickCode } from '../../../shared/lib/workCodes.js'
+import { CODE_CAT, CAT, BADGE, TIMES, MONO, pickCode } from '../../../shared/lib/workCodes.js'
 
 // 일간 스케줄 간트 타임라인 — 클로드 디자인 "정비본부 일간 스케줄 (화면)" 포팅.
 // 왼쪽 고정 이름 열 + 가로 스크롤 24시간 트랙. 근무는 시작~종료 위치의 색 막대.
@@ -18,7 +18,8 @@ const PIN = '#EA8A0C' // 행 고정 강조색 (월간과 동일)
 const PIN_TINT = 'rgba(234,138,12,0.10)'
 const PIN_BG = '#FDF0DA'
 
-function DailyView({ year, month, day, hasData, overrides }) {
+// roster/teams 는 SchedulePage 가 내려준다 (실데이터 또는 데모 폴백).
+function DailyView({ roster, teams, year, month, day, hasData, overrides }) {
   const [collapsed, setCollapsed] = useState({})
   const [hover, setHover] = useState(null)
   const scrollRef = useRef(null)
@@ -44,8 +45,8 @@ function DailyView({ year, month, day, hasData, overrides }) {
   const rowPinned = (pi) => pinRows.includes(pi)
   // 같은 팀에서 이어진 고정 행은 한 블록 — 위/아래 끝에만 테두리
   const rowEdge = (pi) => ({
-    top: rowPinned(pi) && !(rowPinned(pi - 1) && ROSTER[pi - 1]?.team === ROSTER[pi].team),
-    bottom: rowPinned(pi) && !(rowPinned(pi + 1) && ROSTER[pi + 1]?.team === ROSTER[pi].team),
+    top: rowPinned(pi) && !(rowPinned(pi - 1) && roster[pi - 1]?.team === roster[pi].team),
+    bottom: rowPinned(pi) && !(rowPinned(pi + 1) && roster[pi + 1]?.team === roster[pi].team),
   })
 
   const clickRow = (pi) => {
@@ -175,7 +176,7 @@ function DailyView({ year, month, day, hasData, overrides }) {
     setHover({ ...pop, left: x, top: r.top })
   }
 
-  const persons = ROSTER.map((p, pi) => ({ ...p, pi }))
+  const persons = roster.map((p, pi) => ({ ...p, pi }))
   // 시간 격자: 폭에 비례해 늘어나도록 % 기반으로 그린다
   const gridStyle = {
     backgroundImage: 'linear-gradient(90deg, #F2F2F6 1px, transparent 1px)',
@@ -245,7 +246,7 @@ function DailyView({ year, month, day, hasData, overrides }) {
           {/* 고정 이름 열 */}
           <div style={{ flex: 'none', width: 140, background: '#fff', position: 'relative', zIndex: 3, boxShadow: 'inset -1px 0 0 #E4E4EC' }}>
             <div className="hm-corner" style={{ width: 140 }}>인원</div>
-            {TEAMS.map((team) => {
+            {teams.map((team) => {
               const ppl = persons.filter((p) => p.team === team)
               const open = !collapsed[team]
               return (
@@ -260,7 +261,7 @@ function DailyView({ year, month, day, hasData, overrides }) {
                   {open &&
                     ppl.map((p) => (
                       <div
-                        key={p.name}
+                        key={p.pi}
                         style={{
                           height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                           cursor: 'pointer', userSelect: 'none',
@@ -361,7 +362,7 @@ function DailyView({ year, month, day, hasData, overrides }) {
                   </div>
                 </div>
 
-                {TEAMS.map((team) => {
+                {teams.map((team) => {
                   const ppl = persons.filter((p) => p.team === team)
                   const open = !collapsed[team]
                   return (
@@ -370,7 +371,7 @@ function DailyView({ year, month, day, hasData, overrides }) {
                       {open &&
                         ppl.map((p) => (
                           <div
-                            key={p.name}
+                            key={p.pi}
                             style={{
                               position: 'relative', height: 38,
                               ...gridStyle, boxShadow: trackShadow(p.pi),

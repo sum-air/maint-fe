@@ -701,3 +701,11 @@
   margin: -5px -8px;
   border-radius: 8px;
 }
+
+/* 로딩/오류/빈 데이터 안내 */
+.sched-empty {
+  padding: 48px 0;
+  text-align: center;
+  color: #8A8A98;
+  font-size: 13.5px;
+}

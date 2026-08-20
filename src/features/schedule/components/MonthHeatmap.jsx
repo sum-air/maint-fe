@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CODE_CAT, CAT, PAL, pickCode } from '../../../shared/lib/workCodes.js'
+import { CODE_CAT, CAT, PAL } from '../../../shared/lib/workCodes.js'
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 const WEEKEND_BG = '#F7F7FC' // 주말 열 틴트
@@ -8,8 +8,9 @@ const PIN_TINT = 'rgba(234,138,12,0.10)'
 const PIN_BG = '#FDF0DA'
 
 // 팀별 근무코드 히트맵 표. 셀 호버 → 팝오버, 셀 클릭 → 근무코드 변경 모달.
-// roster/teams 는 SchedulePage 가 내려준다 (실데이터 또는 데모 폴백).
-function MonthHeatmap({ roster, teams, year, month, hasData, collapsed, onToggleTeam, hiCode, overrides, onCellHover, onCellLeave, onCellClick, onPaste }) {
+// roster/teams 는 SchedulePage 가 내려준다. 근무 코드는 백엔드 연동 전이라
+// 편집 모달로 채운 로컬 overrides 만 표시하고, 나머지 셀은 비워둔다.
+function MonthHeatmap({ roster, teams, year, month, collapsed, onToggleTeam, hiCode, overrides, onCellHover, onCellLeave, onCellClick, onPaste }) {
   const days = new Date(year, month + 1, 0).getDate()
   const dow = (d) => new Date(year, month, d).getDay()
 
@@ -22,8 +23,7 @@ function MonthHeatmap({ roster, teams, year, month, hasData, collapsed, onToggle
   const dragRef = useRef(null) // 드래그 중: { pi, d, moved }
   const suppressClickRef = useRef(false) // 드래그 직후 따라오는 click 무시
 
-  const codeAt = (pi, d) =>
-    overrides[cellKey(pi, d)]?.code ?? (hasData ? pickCode(pi, d, dow(d)) : null)
+  const codeAt = (pi, d) => overrides[cellKey(pi, d)]?.code ?? null
 
   // (p0,d0)–(p1,d1) 사각 범위의 셀 키 집합
   const rectSet = (p0, d0, p1, d1) => {
@@ -174,13 +174,12 @@ function MonthHeatmap({ roster, teams, year, month, hasData, collapsed, onToggle
     const ov = overrides[ovKey] // { code, hours? } — 모달에서 저장한 값
     const weekend = dow(d) === 0 || dow(d) === 6
 
-    let code = ov?.code
+    const code = ov?.code ?? null
     const ecHours = ov?.hours
-    if (code === undefined) code = hasData ? pickCode(p.pi, d, dow(d)) : null
 
     const isSel = selected.has(ovKey)
 
-    // 데이터 없는 달의 빈 셀
+    // 근무 코드가 없는 빈 셀
     if (code === null) {
       return (
         <span

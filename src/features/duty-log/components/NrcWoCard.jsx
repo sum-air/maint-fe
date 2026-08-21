@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import { MONO, ROSTER } from '../../../shared/lib/workCodes.js'
+import { MONO } from '../../../shared/lib/workCodes.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
-import { AIRCRAFT_REGS, NW_TYPE, NW_ST, DEMO_NRC_WO, todayKey, fmtDate } from '../utils.js'
+import { AIRCRAFT_REGS, NW_TYPE, NW_ST, INITIAL_NRC_WO, todayKey, fmtDate } from '../utils.js'
 
 const PAGE_SIZE = 5
 
 // 작업자 후보 — 실작업 수행 팀(정비기획·운항정비)만 (기술·품질·자재팀 제외)
-const WORKER_POOL = ROSTER.filter((p) => p.team === '정비기획팀' || p.team === '운항정비팀')
+const workerPoolOf = (roster) =>
+  (roster ?? []).filter((p) => p.team === '정비기획팀' || p.team === '운항정비팀')
 
 // 등록/수정 모달 — 구분·기체 드롭다운 + 번호(필수) + 내용(선택).
 // 수정 모드에는 상태(OPEN/CLOSE) 선택과 삭제가 추가되고, CLOSE 전환 시 종결일이 자동 기록된다.
-function NrcWoModal({ mode, item, onSave, onDelete, onClose }) {
+function NrcWoModal({ mode, item, workerPool, onSave, onDelete, onClose }) {
   const [type, setType] = useState(item?.type ?? 'NRC')
   const [ac, setAc] = useState(item?.ac ?? AIRCRAFT_REGS[0])
   const [no, setNo] = useState(item?.no ?? '')
@@ -122,14 +123,14 @@ function NrcWoModal({ mode, item, onSave, onDelete, onClose }) {
             <>
               <div style={{ position: 'fixed', inset: 0, zIndex: 65 }} onClick={() => setOpenSel(null)} />
               <div className="dl-fmenu" style={{ maxHeight: 216, overflowY: 'auto' }}>
-                {WORKER_POOL.map((p) => (
+                {workerPool.map((p) => (
                   <button
-                    key={p.name}
+                    key={p.employeeNo}
                     type="button"
                     className={whoL.includes(p.name) ? 'dl-fitem on' : 'dl-fitem'}
                     onClick={() => toggleWho(p.name)}
                   >
-                    {p.name} · {p.role}
+                    {p.name}{p.role ? ` · ${p.role}` : ''}
                   </button>
                 ))}
               </div>
@@ -232,8 +233,9 @@ function NrcWoModal({ mode, item, onSave, onDelete, onClose }) {
 }
 
 // NRC · W/O 카드 — 필터 3종 + 등록 모달 + 행 클릭 수정 + 날짜(등록/종결) 2줄 + 페이지네이션
-function NrcWoCard() {
-  const [items, setItems] = useState(DEMO_NRC_WO)
+function NrcWoCard({ roster }) {
+  const workerPool = workerPoolOf(roster)
+  const [items, setItems] = useState(INITIAL_NRC_WO)
   const [fltType, setFltType] = useState(null)
   const [fltSt, setFltSt] = useState(null)
   const [fltAc, setFltAc] = useState(null)
@@ -352,6 +354,7 @@ function NrcWoCard() {
         <NrcWoModal
           mode={modal.mode}
           item={modal.item}
+          workerPool={workerPool}
           onSave={modal.mode === 'new' ? saveNew : saveEdit(modal.item)}
           onDelete={remove}
           onClose={() => setModal(null)}

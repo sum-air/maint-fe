@@ -1,5 +1,5 @@
 import { CAT, CODE_CAT, TIMES, MONO } from '../../../shared/lib/workCodes.js'
-import { STATUS, ATT_ROSTER, groupByTeam, calcDur } from '../utils.js'
+import { STATUS, groupByTeam, calcDur } from '../utils.js'
 
 const SHORT = { m: '조기', d: '주간', t: '탑승', n: '야간', off: '휴무', ws: '대휴', lv: '연차' }
 const pad = (n) => String(n).padStart(2, '0')
@@ -7,7 +7,7 @@ const pad = (n) => String(n).padStart(2, '0')
 // 일간 행 데이터 가공: 초과근무·계획근무 계산 (디자인 deco 로직)
 export function decoRow(r) {
   const cat = CODE_CAT[r.code]
-  const cc = CAT[cat]
+  const cc = CAT[cat] ?? CAT.off // 배정 없는 날은 회색 톤
   const s = STATUS[r.st]
   const isOff = cat === 'off' || cat === 'ws' || cat === 'lv'
   let otTxt = '—'
@@ -18,14 +18,14 @@ export function decoRow(r) {
     otTxt = otMin >= 10 ? `+${Math.floor(otMin / 60)}:${pad(otMin % 60)}` : '—'
   }
   const tt = TIMES[r.code]
-  const plan = isOff ? SHORT[cat] : `${pad(tt[0])}:00–${pad(tt[1] % 24)}:00`
+  const plan = isOff ? SHORT[cat] : tt ? `${pad(tt[0])}:00–${pad(tt[1] % 24)}:00` : '—'
   return { ...r, cat, cc, s, isOff, otTxt, otMin, plan }
 }
 
 // 일간 출퇴근 표: 이름 · 근무코드 · 출근 · 퇴근 · 초과 · 총 근무 · 상태
-// edits: 모달에서 수정한 출퇴근 시각 { [이름]: { in, out } }
-function DailyTable({ onOpen, edits = {} }) {
-  const merged = ATT_ROSTER.map((r) => {
+// rows: buildDailyRows 결과 (실데이터), edits: 모달에서 수정한 출퇴근 시각 { [이름]: { in, out } }
+function DailyTable({ rows = [], onOpen, edits = {} }) {
+  const merged = rows.map((r) => {
     const e = edits[r.name]
     return e ? { ...r, in: e.in, out: e.out, dur: calcDur(e.in, e.out) } : r
   })
@@ -58,7 +58,7 @@ function DailyTable({ onOpen, edits = {} }) {
                     color: m.cc.tx, background: m.cc.bg, border: `1px solid ${m.cc.br}`,
                   }}
                 >
-                  {m.code}
+                  {m.code || '—'}
                 </span>
               </div>
               <div className="att-cell att-mono" style={{ color: m.in ? '#15151D' : '#C9C9D2' }}>{m.in || '—'}</div>

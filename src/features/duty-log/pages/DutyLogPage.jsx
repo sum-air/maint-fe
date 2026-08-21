@@ -1,12 +1,14 @@
-import { useState } from 'react'
-import { MONO, ROSTER, CAT, CODE_CAT, TIMES, pickCode } from '../../../shared/lib/workCodes.js'
+import { useEffect, useState } from 'react'
+import { MONO, CAT, CODE_CAT, TIMES } from '../../../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
+import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
+import { fetchMonthDutyMap, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 import CategoryModal from '../components/CategoryModal.jsx'
 import TimeModal from '../components/TimeModal.jsx'
 import NrcWoCard from '../components/NrcWoCard.jsx'
 import ExportModal from '../components/ExportModal.jsx'
-import { CAT_GROUPS, DEMO_LOGS, DEMO_TODOS, DEMO_MEMO, demoLogsFor, todayKey, nowHM, fmtDate } from '../utils.js'
+import { CAT_GROUPS, INITIAL_LOGS, INITIAL_TODOS, INITIAL_MEMO, todayKey, nowHM, fmtDate } from '../utils.js'
 import './duty-log.css'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -23,9 +25,9 @@ const durTxt = (s, e) => {
 
 // To-do · 메모 — 개인용, 백엔드 연동 전 화면 상태만 (좌측 카드 상단부)
 function TodoMemo() {
-  const [todos, setTodos] = useState(DEMO_TODOS)
+  const [todos, setTodos] = useState(INITIAL_TODOS)
   const [draft, setDraft] = useState('')
-  const [memo, setMemo] = useState(DEMO_MEMO)
+  const [memo, setMemo] = useState(INITIAL_MEMO)
 
   // 이월 규칙 — 미완료는 체크될 때까지 계속 보이고, 완료 건은 완료한 그날만 보인다.
   // (백엔드 연동 시 서버에 doneAt 저장 — 지금은 화면 상태라 새로고침 전까지만 유지)
@@ -80,7 +82,7 @@ function TodoMemo() {
 // 일별 일지 목록 — 월 필터 + 5일 페이지네이션 (좌측 카드 하단부, 시안 1안)
 const PAGE_SIZE = 5
 
-function DayList({ logsByDate, date, onPick }) {
+function DayList({ logsByDate, date, onPick, dutyCode }) {
   const [month, setMonth] = useState(() => new Date().getMonth() + 1)
   const [page, setPage] = useState(0)
 
@@ -98,12 +100,11 @@ function DayList({ logsByDate, date, onPick }) {
 
   const [mpop, setMpop] = useState(false)
   const year = new Date().getFullYear()
-  const pi = ROSTER.findIndex((p) => p.name === CURRENT_USER.name)
 
-  // 그날 내 근무코드 (스케줄 데모 로직) + 기록 시간대 (첫 기록~마지막 기록)
+  // 그날 내 근무코드 (실데이터 — 보고 있는 달만 로드돼 있다) + 기록 시간대 (첫 기록~마지막 기록)
   const codeOf = (k) => {
     const [m, d] = k.split('.').map(Number)
-    return pickCode(pi, d, new Date(year, m - 1, d).getDay())
+    return dutyCode(m, d)
   }
   const spanOf = (k) => {
     const l = logsByDate[k]
@@ -163,7 +164,7 @@ function DayList({ logsByDate, date, onPick }) {
               {fmtDate(k)}
             </span>
             <span className="dl-tspan">{spanOf(k)}</span>
-            <span className="dl-codechip" style={{ background: cg.bg, color: cg.tx }}>{code}</span>
+            {code && <span className="dl-codechip" style={{ background: cg.bg, color: cg.tx }}>{code}</span>}
             <span className="dl-goarrow">
               <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </span>
@@ -194,7 +195,32 @@ function DayList({ logsByDate, date, onPick }) {
 function DutyLogPage() {
   const [date, setDate] = useState(todayKey()) // "MM.DD"
   const [calOpen, setCalOpen] = useState(false)
-  const [logsByDate, setLogsByDate] = useState(DEMO_LOGS)
+  const [logsByDate, setLogsByDate] = useState(INITIAL_LOGS)
+
+  // 실데이터 — 정비 로스터(팀·인원 필터), 내 관리 팀(권한), 보고 있는 달의 근무 배정
+  const [roster, setRoster] = useState([])
+  const [managedTeams, setManagedTeams] = useState([])
+  useEffect(() => {
+    let alive = true
+    fetchMaintRoster().then((l) => { if (alive) setRoster(l) }).catch(() => {})
+    fetchMyRosterScopes()
+      .then((l) => { if (alive) setManagedTeams(l.map((m) => m.departmentName)) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const dateMonth = Number(date.split('.')[0])
+  const [dutyMap, setDutyMap] = useState({ month: 0, map: {} })
+  useEffect(() => {
+    let alive = true
+    fetchMonthDutyMap(new Date().getFullYear(), dateMonth - 1)
+      .then((map) => { if (alive) setDutyMap({ month: dateMonth, map }) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [dateMonth])
+  // (사번, 월, 일) → 근무코드. 로드된 달이 아니면 undefined (칩·시각은 폴백 표시)
+  const dutyCodeOf = (employeeNo, m, d) =>
+    m === dutyMap.month ? dutyMap.map[`${employeeNo}_${d}`]?.code : undefined
 
   // 입력 상태 — 시간은 현재 시각 디폴트, 시작/종료 클릭 시 시간 모달
   const [start, setStart] = useState(() => nowHM())
@@ -204,30 +230,29 @@ function DutyLogPage() {
   const [catOpen, setCatOpen] = useState(false)
   const [timeTarget, setTimeTarget] = useState(null) // 'start' | 'end' | null
 
-  // 일지 주인 선택 — admin(김기홍·본부장)은 전체 인원, 팀장은 자기 팀원만.
-  // 로그인 연동 시 서버가 내려주는 권한으로 교체한다. 다른 사람 일지는 보기 전용.
-  const me = ROSTER.find((p) => p.name === CURRENT_USER.name)
+  // 일지 주인 선택 — 관리자(TENANT_ADMIN)는 전체 인원, 근무표 관리자로 지정된 사람은 지정 팀만.
+  // 다른 사람 일지는 보기 전용 — 일지 백엔드(work_log)가 아직 없어 빈 목록이 나온다.
   const canPickTeam = CURRENT_USER.isAdmin
-  const canPickPerson = CURRENT_USER.isAdmin || me?.role === '팀장'
+  const canPickPerson = CURRENT_USER.isAdmin || managedTeams.length > 0
   const [viewTeam, setViewTeam] = useState(null)
   const [viewName, setViewName] = useState(null)
   const [ownerSel, setOwnerSel] = useState(null) // 'team' | 'name' | null
   const [xlOpen, setXlOpen] = useState(false) // 엑셀 추출 모달 (admin)
   const viewing = viewName != null && viewName !== CURRENT_USER.name
 
-  const teams = [...new Set(ROSTER.map((p) => p.team))]
-  // admin 은 팀을 먼저 골라야 이름 목록이 나온다 (팀장은 자기 팀이 곧 범위)
-  const people = ROSTER
-    .filter((p) => (canPickTeam ? p.team === viewTeam : p.team === me?.team))
+  const teams = canPickTeam ? [...new Set(roster.map((p) => p.team))] : managedTeams
+  // admin 은 팀을 먼저 골라야 이름 목록이 나온다 (지정 팀장은 지정 팀이 곧 범위)
+  const people = roster
+    .filter((p) => (canPickTeam ? p.team === viewTeam : managedTeams.includes(p.team)))
     .map((p) => p.name)
 
   const pickTeam = (t) => {
     setViewTeam(t)
-    if (!t || ROSTER.find((p) => p.name === viewName)?.team !== t) setViewName(null)
+    if (!t || roster.find((p) => p.name === viewName)?.team !== t) setViewName(null)
   }
 
   const isToday = date === todayKey()
-  const logs = viewing ? demoLogsFor(viewName, date) : (logsByDate[date] ?? [])
+  const logs = viewing ? [] : (logsByDate[date] ?? [])
 
   const stepDay = (delta) => {
     const [m, d] = date.split('.').map(Number)
@@ -235,10 +260,12 @@ function DutyLogPage() {
     setDate(`${pad(dt.getMonth() + 1)}.${pad(dt.getDate())}`)
   }
 
-  // 그날 일지 주인의 근무코드 출근·퇴근 시각 (스케줄 데모 로직 — 휴무 등 시간 없는 코드는 09:00~18:00)
+  // 그날 일지 주인의 근무코드 출근·퇴근 시각 (실데이터 — 배정 없거나 시간 없는 코드는 09:00~18:00)
   const [selM, selD] = date.split('.').map(Number)
-  const shiftPi = ROSTER.findIndex((p) => p.name === (viewing ? viewName : CURRENT_USER.name))
-  const shiftTT = TIMES[pickCode(shiftPi, selD, new Date(new Date().getFullYear(), selM - 1, selD).getDay())]
+  const ownerNo = viewing
+    ? roster.find((p) => p.name === viewName)?.employeeNo
+    : CURRENT_USER.employeeNo
+  const shiftTT = TIMES[dutyCodeOf(ownerNo, selM, selD)]
   const shiftStart = shiftTT ? `${pad(shiftTT[0] % 24)}:00` : '09:00'
   const shiftEnd = shiftTT ? `${pad(shiftTT[1] % 24)}:00` : '18:00'
 
@@ -434,11 +461,16 @@ function DutyLogPage() {
         </div>
 
         {/* 2행: 일별 일지 │ NRC·W/O */}
-        <DayList logsByDate={logsByDate} date={date} onPick={setDate} />
-        <NrcWoCard />
+        <DayList
+          logsByDate={logsByDate}
+          date={date}
+          onPick={setDate}
+          dutyCode={(m, d) => dutyCodeOf(CURRENT_USER.employeeNo, m, d)}
+        />
+        <NrcWoCard roster={roster} />
       </div>
 
-      {xlOpen && <ExportModal logsByDate={logsByDate} onClose={() => setXlOpen(false)} />}
+      {xlOpen && <ExportModal logsByDate={logsByDate} roster={roster} onClose={() => setXlOpen(false)} />}
       {catOpen && <CategoryModal selected={cat} onPick={setCat} onClose={() => setCatOpen(false)} />}
       {timeTarget && (
         <TimeModal

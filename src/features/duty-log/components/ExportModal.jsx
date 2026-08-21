@@ -1,15 +1,16 @@
 import { useState } from 'react'
-import { MONO, ROSTER, pickCode } from '../../../shared/lib/workCodes.js'
+import { MONO } from '../../../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
+import { fetchMonthDutyMap } from '../../../shared/lib/roster.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
-import { demoLogsFor, todayKey, fmtDate } from '../utils.js'
+import { todayKey, fmtDate } from '../utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
-const TEAMS = [...new Set(ROSTER.map((p) => p.team))]
 
 // 업무일지 엑셀 추출 모달 (admin 전용) — 월/일 단위 + 팀·인원 중복 선택.
 // 미선택 = 전체. 파일은 엑셀에서 바로 열리는 CSV(BOM 포함)로 내려받는다.
-function ExportModal({ logsByDate, onClose }) {
+// roster 는 실데이터 정비 인원 목록, 근무코드는 /duty-assignments 에서 읽는다.
+function ExportModal({ logsByDate, roster, onClose }) {
   const [unit, setUnit] = useState('month') // 'month' | 'day'
   // 월 범위 — mTo 가 null 이면 단일 월. 시작 월 → 끝 월 두 번 클릭으로 범위 지정
   const [mFrom, setMFrom] = useState(() => new Date().getMonth() + 1)
@@ -20,13 +21,14 @@ function ExportModal({ logsByDate, onClose }) {
   const [selNames, setSelNames] = useState([])
   const [openSel, setOpenSel] = useState(null) // 'period' | 'team' | 'name' | null
 
-  const people = ROSTER.filter((p) => selTeams.length === 0 || selTeams.includes(p.team))
+  const teams = [...new Set(roster.map((p) => p.team))]
+  const people = roster.filter((p) => selTeams.length === 0 || selTeams.includes(p.team))
 
   const toggleTeam = (t) => {
     const next = selTeams.includes(t) ? selTeams.filter((x) => x !== t) : [...selTeams, t]
     setSelTeams(next)
     // 팀 범위를 벗어난 인원 선택은 정리
-    setSelNames((ns) => ns.filter((n) => next.length === 0 || next.includes(ROSTER.find((p) => p.name === n)?.team)))
+    setSelNames((ns) => ns.filter((n) => next.length === 0 || next.includes(roster.find((p) => p.name === n)?.team)))
   }
   const toggleName = (n) => setSelNames((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
 
@@ -44,11 +46,12 @@ function ExportModal({ logsByDate, onClose }) {
     }
   }
 
-  // 내 일지는 화면 상태, 다른 사람은 데모 생성 — 백엔드 연동 시 추출 API 다운로드로 교체
-  const logsOf = (name, key) => (name === CURRENT_USER.name ? (logsByDate[key] ?? []) : demoLogsFor(name, key))
+  // 내 일지는 화면 상태, 다른 사람 일지는 백엔드(work_log)가 아직 없어 빈 목록 —
+  // API 가 생기면 서버 추출 다운로드로 교체한다.
+  const logsOf = (name, key) => (name === CURRENT_USER.name ? (logsByDate[key] ?? []) : [])
 
   const year = new Date().getFullYear()
-  const exportCsv = () => {
+  const exportCsv = async () => {
     const months = Array.from({ length: (mTo ?? mFrom) - mFrom + 1 }, (_, i) => mFrom + i)
     const days = unit === 'month'
       ? months.flatMap((m) =>
@@ -56,13 +59,20 @@ function ExportModal({ logsByDate, onClose }) {
       : [day]
     const targets = selNames.length > 0 ? people.filter((p) => selNames.includes(p.name)) : people
 
+    // 근무코드 실데이터 — 기간에 걸친 달들을 한 번씩 읽는다. 실패한 달은 빈 코드로 남긴다.
+    const dutyByMonth = {}
+    const monthList = unit === 'month' ? months : [Number(day.split('.')[0])]
+    await Promise.all(monthList.map((m) =>
+      fetchMonthDutyMap(year, m - 1)
+        .then((map) => { dutyByMonth[m] = map })
+        .catch(() => { dutyByMonth[m] = {} })))
+
     const rows = [['날짜', '팀', '이름', '직급', '근무코드', '시작', '종료', '카테고리', '내용']]
     for (const p of targets) {
-      const pi = ROSTER.indexOf(p)
       for (const k of days) {
         const [m, d] = k.split('.').map(Number)
-        const code = pickCode(pi, d, new Date(year, m - 1, d).getDay())
-        for (const l of logsOf(p.name, k)) rows.push([k, p.team, p.name, p.role, code, l.s, l.e || '', l.c, l.t])
+        const code = dutyByMonth[m]?.[`${p.employeeNo}_${d}`]?.code ?? ''
+        for (const l of logsOf(p.name, k)) rows.push([k, p.team, p.name, p.role ?? '', code, l.s, l.e || '', l.c, l.t])
       }
     }
 
@@ -184,7 +194,7 @@ function ExportModal({ logsByDate, onClose }) {
 
         {/* 대상 — 팀·인원 중복 선택, 미선택 = 전체 */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-          {multiSel('team', '팀', TEAMS, selTeams, toggleTeam, () => { setSelTeams([]); setSelNames([]) })}
+          {multiSel('team', '팀', teams, selTeams, toggleTeam, () => { setSelTeams([]); setSelNames([]) })}
           {multiSel('name', '인원', people.map((p) => p.name), selNames, toggleName, () => setSelNames([]))}
         </div>
 

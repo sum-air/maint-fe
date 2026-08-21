@@ -1,5 +1,5 @@
-// 근무 코드 정의 + 임시 데이터 — 클로드 디자인 "정비본부 월간 스케줄 (화면)" 기준.
-// 백엔드 연동 전까지 디자인의 데모 로스터/스케줄 생성 로직을 그대로 사용한다.
+// 근무 코드 정의 — 코드 사전(시간·분류·팔레트·범례). 실데이터가 아니라 도메인 어휘다.
+// 인원·근무 배정 실데이터는 shared/lib/maintRoster.js 와 shared/lib/roster.js 가 담당한다.
 
 export const MONO = "'JetBrains Mono', ui-monospace, monospace"
 
@@ -63,47 +63,6 @@ export const CODE_GROUPS = [
   { key: 'etc', label: '기타', codes: [{ c: 'H', d: '병가', t: '—' }, { c: 'PV', d: '청원/경조', t: '—' }, { c: 'K', d: '공가', t: '—' }] },
   { key: 'ec', label: '긴급', codes: [{ c: 'EC(0)', d: '긴급호출근무', t: '휴무일 호출' }] },
 ]
-
-export const TEAMS = ['정비기획팀', '정비기술팀', '정비품질팀', '정비자재팀', '운항정비팀']
-
-// 임시 로스터 (디자인 데모 데이터)
-export const ROSTER = [
-  { team: '정비기획팀', name: '김기홍', role: '사원' },
-  { team: '정비기술팀', name: '김경목', role: '팀장' },
-  { team: '정비기술팀', name: '현은솔', role: '대리' },
-  { team: '정비품질팀', name: '서강윤', role: '팀장' },
-  { team: '정비품질팀', name: '김정은', role: '사원' },
-  { team: '정비자재팀', name: '간성진', role: '팀장' },
-  { team: '정비자재팀', name: '박종진', role: '과장' },
-  { team: '정비자재팀', name: '이신행', role: '사원' },
-  { team: '운항정비팀', name: '차면규', role: '팀장' },
-  { team: '운항정비팀', name: '문지환', role: '과장' },
-  { team: '운항정비팀', name: '김찬수', role: '대리' },
-  { team: '운항정비팀', name: '이서용', role: '사원' },
-  { team: '운항정비팀', name: '김동민', role: '사원' },
-  { team: '운항정비팀', name: '오명열', role: '사원' },
-  { team: '운항정비팀', name: '오정훈', role: '사원' },
-  { team: '운항정비팀', name: '김성은', role: '사원' },
-]
-
-// 결정적 의사난수 — 같은 (사람, 날짜)면 항상 같은 코드가 나온다 (디자인 로직 그대로)
-const hfrac = (a, b) => {
-  const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453
-  return v - Math.floor(v)
-}
-
-const HCATS = ['D', 'M', 'N', 'T', 'O']
-const CODE_POOL = { D: ['D1', 'D2', 'D3'], M: ['M1', 'M2'], N: ['N1', 'N2', 'N3', 'MN'], T: ['T1', 'T2'], O: ['OFF', 'RO'] }
-
-// pi(로스터 인덱스), d(일), dow(요일) → 근무코드
-export function pickCode(pi, d, dow) {
-  let group
-  if ((dow === 0 || dow === 6) && hfrac(pi, d) < 0.6) group = 'O'
-  else if (hfrac(pi + 3, d * 2) < 0.12) group = 'O'
-  else group = HCATS[Math.floor(hfrac(pi, d) * 4)]
-  const pool = CODE_POOL[group]
-  return pool[Math.floor(hfrac(pi + 5, d * 3) * pool.length)]
-}
 
 const pad = (n) => String(n % 24).padStart(2, '0')
 

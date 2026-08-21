@@ -1,14 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { MONO, ROSTER, CAT, CODE_CAT, TIMES, pickCode } from '../shared/lib/workCodes.js'
+import { MONO, CAT, CODE_CAT, TIMES } from '../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../shared/lib/currentUser.js'
-import { CAT_GROUPS, DEMO_LOGS, DEMO_NRC_WO, todayKey } from '../features/duty-log/utils.js'
+import { fetchMyMonthDuties } from '../shared/lib/roster.js'
+import { CAT_GROUPS } from '../features/duty-log/utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
-const nowHM = () => {
-  const d = new Date()
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
 
 // 시간대별 인사말
 const greetingOf = (h) =>
@@ -36,7 +33,7 @@ function StDot({ st }) {
   )
 }
 
-// ── 출퇴근 카드 (A안 스탯 분리형) — 기록은 화면 상태만, 백엔드 연동 시 출퇴근 API 로 교체 ──
+// ── 출퇴근 카드 (A안 스탯 분리형) — 오늘 근무는 실데이터, 출퇴근 기록은 백엔드(work_session) 연동 예정 ──
 function Stat({ label, value, color = '#1A1A22' }) {
   return (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 86 }}>
@@ -47,17 +44,11 @@ function Stat({ label, value, color = '#1A1A22' }) {
 }
 const VLine = () => <span style={{ width: 1, height: 30, background: '#EEEEF1' }} />
 
-function PunchCard() {
-  const [inAt, setInAt] = useState('')
-  const [outAt, setOutAt] = useState('')
-
+function PunchCard({ todayCode }) {
   const now = new Date()
-  const pi = ROSTER.findIndex((p) => p.name === CURRENT_USER.name)
-  const code = pickCode(pi, now.getDate(), now.getDay())
-  const tt = TIMES[code]
-  const cc = CAT[CODE_CAT[code] ?? 'off']
+  const tt = todayCode ? TIMES[todayCode] : null
+  const cc = CAT[CODE_CAT[todayCode] ?? 'off']
   const dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일 ${'일월화수목금토'[now.getDay()]}요일`
-  const done = inAt && outAt
 
   return (
     <div style={{ ...CARD, padding: '18px 26px', display: 'flex', alignItems: 'center', gap: 22 }}>
@@ -68,35 +59,33 @@ function PunchCard() {
         </div>
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 18 }}>
-        <Stat label="오늘 근무" value={code} color={cc.tx} />
+        <Stat label="오늘 근무" value={todayCode ?? '—'} color={todayCode ? cc.tx : '#C4C4CC'} />
         <VLine />
-        <Stat label="근무 시간" value={tt ? `${pad(tt[0] % 24)}:00–${pad(tt[1] % 24)}:00` : '휴무'} />
+        <Stat label="근무 시간" value={tt ? `${pad(tt[0] % 24)}:00–${pad(tt[1] % 24)}:00` : todayCode ? '휴무' : '—'} />
         <VLine />
-        <Stat label="출근" value={inAt || '--:--'} color={inAt ? '#5350E2' : '#C4C4CC'} />
+        <Stat label="출근" value="--:--" color="#C4C4CC" />
         <VLine />
-        <Stat label="퇴근" value={outAt || '--:--'} color={outAt ? '#5350E2' : '#C4C4CC'} />
+        <Stat label="퇴근" value="--:--" color="#C4C4CC" />
         <button
           type="button"
-          disabled={done}
+          disabled
+          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
           style={{
             height: 44, padding: '0 26px', border: 'none', borderRadius: 12, marginLeft: 6,
             fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700,
-            ...(done
-              ? { background: '#E6F5EE', color: '#1F9D6B', cursor: 'default' }
-              : { background: '#5350E2', color: '#fff', cursor: 'pointer' }),
+            background: '#F1F1F4', color: '#B0B0BA', cursor: 'default',
           }}
-          onClick={() => (inAt ? setOutAt(nowHM()) : setInAt(nowHM()))}
         >
-          {done ? '근무 완료' : inAt ? '퇴근 체크' : '출근 체크'}
+          출근 체크
         </button>
       </div>
     </div>
   )
 }
 
-// ── 오늘 업무일지 요약 — DEMO_LOGS(백엔드 연동 시 일지 API) ──
+// ── 오늘 업무일지 요약 — 일지 백엔드(work_log) 연동 예정이라 빈 상태로 시작 ──
 function TodayLogCard() {
-  const logs = DEMO_LOGS[todayKey()] ?? []
+  const logs = []
   const last = logs[logs.length - 1]
   const span = logs.length > 0 ? `${logs[0].s} ~ ${last.e || last.s}` : ''
 
@@ -137,12 +126,11 @@ function TodayLogCard() {
   )
 }
 
-// ── 이번 달 스케줄 — 스케줄 데모 로직(pickCode), 오늘 강조 ──
-function MonthCard() {
+// ── 이번 달 스케줄 — 내 근무 배정 실데이터 (스케줄 화면과 같은 원천), 오늘 강조 ──
+function MonthCard({ duties }) {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth() // 0-base
-  const pi = ROSTER.findIndex((p) => p.name === CURRENT_USER.name)
   const firstDow = new Date(y, m, 1).getDay()
   const days = new Date(y, m + 1, 0).getDate()
 
@@ -161,7 +149,7 @@ function MonthCard() {
         {Array.from({ length: firstDow }, (_, i) => <span key={`e${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
           const d = i + 1
-          const code = pickCode(pi, d, new Date(y, m, d).getDay())
+          const code = duties[d]?.code
           const today = d === now.getDate()
           return (
             <span
@@ -174,7 +162,9 @@ function MonthCard() {
               }}
             >
               <span style={{ fontSize: 11, fontWeight: today ? 800 : 500, color: today ? '#5350E2' : '#55555F', fontVariantNumeric: 'tabular-nums' }}>{d}</span>
-              <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800, color: codeColor(code) }}>{code}</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 800, minHeight: 12, color: code ? codeColor(code) : '#D8D8DE' }}>
+                {code ?? ''}
+              </span>
             </span>
           )
         })}
@@ -183,11 +173,11 @@ function MonthCard() {
   )
 }
 
-// ── 작업지시 (NRC·W/O 통합 5건) — DEMO_NRC_WO(백엔드 연동 시 API) ──
+// ── 작업지시 (NRC·W/O) — 백엔드(work_order) 연동 예정이라 빈 상태로 시작 ──
 const WCOL = '130px 90px 70px 1fr 110px 90px'
 
 function WorkCard() {
-  const items = DEMO_NRC_WO.slice(0, 5)
+  const items = []
   return (
     <div style={CARD}>
       <CardHead title="작업지시" more="전체" to="/duty-log" />
@@ -217,12 +207,28 @@ function WorkCard() {
           <span style={{ display: 'flex', justifyContent: 'center' }}><StDot st={x.st} /></span>
         </div>
       ))}
+      {items.length === 0 && (
+        <div style={{ padding: '22px 0', textAlign: 'center', fontSize: 12.5, fontWeight: 600, color: '#B4B7C0' }}>
+          등록된 작업지시가 없습니다
+        </div>
+      )}
     </div>
   )
 }
 
 // 홈 — 요약 대시보드: 출퇴근 → [오늘 업무일지 | 이번 달 스케줄] → 작업지시
 function HomePage() {
+  // 내 이번 달 근무 배정 — 실패 시 빈 캘린더 (닫히는 쪽으로 동작)
+  const [duties, setDuties] = useState({})
+  useEffect(() => {
+    let alive = true
+    const now = new Date()
+    fetchMyMonthDuties(now.getFullYear(), now.getMonth())
+      .then((map) => { if (alive) setDuties(map) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
   return (
     <section
       style={{
@@ -231,10 +237,10 @@ function HomePage() {
         background: '#F7F7F9', display: 'flex', flexDirection: 'column', gap: 10,
       }}
     >
-      <PunchCard />
+      <PunchCard todayCode={duties[new Date().getDate()]?.code ?? null} />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <TodayLogCard />
-        <MonthCard />
+        <MonthCard duties={duties} />
       </div>
       <WorkCard />
     </section>

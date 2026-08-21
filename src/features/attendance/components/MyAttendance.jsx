@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell, Legend } from 'recharts'
 import { CAT, CODE_CAT, MONO } from '../../../shared/lib/workCodes.js'
+import { fetchMyMonthDuties } from '../../../shared/lib/roster.js'
 
-// 내 출퇴근 (근무자 화면) — 클로드 디자인 "정비본부 출퇴근 근무자 (화면)" 포팅.
-// 오늘 근무 카드(실시간 진행) + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
-// 데모 시계: 2026-07-20 10:50 부터 흐른다 (백엔드/실시간 연동 전).
+// 내 출퇴근 (근무자 화면) — 오늘 근무 카드 + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
+// 근무코드는 실데이터(/duty-assignments)이고, 출퇴근 기록·집계·차트는 백엔드(work_session)
+// 연동 전이라 미체크/0 으로 표시한다.
 
 const pad = (n) => String(n).padStart(2, '0')
 const WL = ['일', '월', '화', '수', '목', '금', '토']
-const TODAY = new Date(2026, 6, 20)
-const CODE_SEQ = ['D1', 'D1', 'D2', 'D1', 'M1', 'N3', 'T1']
-const IN_MAP = { D1: '07:58', D2: '08:56', M1: '05:57', N3: '12:55', T1: '05:56' }
-const OUT_MAP = { D1: '17:05', D2: '18:06', M1: '15:04', N3: '22:06', T1: '15:03' }
-const OT_MAP = { 3: '2.0h', 8: '1.5h', 15: '3.0h', 17: '2.5h', 18: '1.0h' }
+const NOW = new Date()
+const TODAY = new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate())
+const YEAR = TODAY.getFullYear()
 
 const ST = {
   normal: { c: '#1F9D6B', b: '#E6F5EE', label: '정상' },
@@ -20,15 +19,11 @@ const ST = {
   early: { c: '#D2731E', b: '#FBECDD', label: '조퇴' },
   leave: { c: '#9C8B93', b: '#F0EBED', label: '휴무' },
   sched: { c: '#8A8A98', b: '#EFEFF2', label: '예정' },
-}
-
-const rnd = (seed) => {
-  const x = Math.sin(seed) * 10000
-  return x - Math.floor(x)
+  miss: { c: '#8A8A98', b: '#EFEFF2', label: '미체크' },
 }
 
 const codeBadge = (code, big) => {
-  const cc = CAT[CODE_CAT[code]]
+  const cc = CAT[CODE_CAT[code]] ?? CAT.off // 배정 없는 날은 회색 톤
   return {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
     minWidth: big ? 52 : 42, padding: big ? '6px 14px' : '3px 10px', borderRadius: big ? 9 : 6,
@@ -124,14 +119,7 @@ function StackChart({ data, max, isWeek }) {
 const CHART_BASE = '#433FBB' // 기본 근무
 const CHART_OT = '#DB2777' // 초과 근무
 
-// 이번 달 근무 구성 (도넛): 퍼플 → 마젠타 → 핑크 → 앰버 + 회색(휴무)
-const COMP_DATA = [
-  { name: '주간', value: 15 },
-  { name: '야간', value: 4 },
-  { name: '조기', value: 3 },
-  { name: '탑승', value: 2 },
-  { name: '휴무', value: 6 },
-]
+// 이번 달 근무 구성 (도넛) 색: 퍼플 → 마젠타 → 핑크 → 앰버 + 회색(휴무)
 const COMP_COLORS = ['#433FBB', '#9333EA', '#DB2777', '#F59E0B', '#E1E1E9']
 
 const CompTooltip = ({ active, payload }) => {
@@ -143,31 +131,14 @@ const CompTooltip = ({ active, payload }) => {
   )
 }
 
-// 매초 흐르는 시계는 이 컴포넌트 안에만 둔다 —
-// 부모(MyAttendance)가 매초 다시 렌더링되면 차트가 애니메이션을 반복해 깜빡이기 때문.
-function useDemoClock() {
-  const [now, setNow] = useState(() => new Date(2026, 6, 20, 10, 50, 0))
-  useEffect(() => {
-    const t = setInterval(() => setNow((n) => new Date(n.getTime() + 1000)), 1000)
-    return () => clearInterval(t)
-  }, [])
-  return now
-}
-
 const card = { border: '1px solid #E5E5EC', borderRadius: 16, background: '#fff', boxShadow: '0 1px 2px rgba(21,21,29,.04)' }
 
 // 오늘 근무 카드 — 보라 그라데이션 히어로 (링 게이지 + 날짜 + 출근/경과/남은 + 버튼)
-// 데모 시계가 매초 갱신되므로 별도 컴포넌트로 격리 (차트 깜빡임 방지)
+// 출퇴근 기록 백엔드(work_session) 연동 전이라 진행률·경과는 0/— 이고 버튼은 비활성이다.
 function TodayCard() {
-  const now = useDemoClock()
-  const start = new Date(now)
-  start.setHours(7, 58, 0, 0)
-  const sec = Math.max(0, Math.floor((now - start) / 1000))
-  const elapsed = `${pad(Math.floor(sec / 3600))}:${pad(Math.floor((sec % 3600) / 60))}`
-  const nowMin = now.getHours() * 60 + now.getMinutes()
-  const pct = Math.max(0, Math.min(100, Math.round(((nowMin - 480) / 540) * 100)))
-  const remMin = Math.max(0, 1020 - nowMin)
-  const remain = `${pad(Math.floor(remMin / 60))}:${pad(remMin % 60)}`
+  const pct = 0
+  const elapsed = '—'
+  const remain = '—'
 
   // 링 게이지 (r=52 원 둘레 326.7 기준)
   const CIRC = 2 * Math.PI * 52
@@ -200,10 +171,12 @@ function TodayCard() {
 
       {/* 날짜 + 스탯 */}
       <div>
-        <div style={{ fontSize: 12.5, fontWeight: 700, opacity: 0.8 }}>2026년</div>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.5px', marginTop: 2 }}>7월 20일 월요일</div>
+        <div style={{ fontSize: 12.5, fontWeight: 700, opacity: 0.8 }}>{YEAR}년</div>
+        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-.5px', marginTop: 2 }}>
+          {TODAY.getMonth() + 1}월 {TODAY.getDate()}일 {WL[TODAY.getDay()]}요일
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 12.5, fontWeight: 700, opacity: 0.9 }}>
-          <span>출근 <span style={{ fontFamily: MONO, fontWeight: 800 }}>07:58</span></span>
+          <span>출근 <span style={{ fontFamily: MONO, fontWeight: 800 }}>—</span></span>
           <span style={{ opacity: 0.5 }}>|</span>
           <span>경과 <span style={{ fontFamily: MONO, fontWeight: 800 }}>{elapsed}</span></span>
           <span style={{ opacity: 0.5 }}>|</span>
@@ -211,18 +184,21 @@ function TodayCard() {
         </div>
       </div>
 
-      {/* 출근/퇴근 버튼 — 출근한 상태라 출근하기는 비활성 */}
+      {/* 출근/퇴근 버튼 — 출퇴근 기록 백엔드 연동 후 활성화 */}
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
         <button
           type="button"
           disabled
+          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
           style={{ height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12, background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', fontFamily: 'inherit', fontWeight: 800, cursor: 'default' }}
         >
           출근하기
         </button>
         <button
           type="button"
-          style={{ height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12, background: '#fff', color: '#433FBB', fontFamily: 'inherit', fontWeight: 800, cursor: 'pointer' }}
+          disabled
+          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
+          style={{ height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12, background: 'rgba(255,255,255,.55)', color: 'rgba(67,63,187,.55)', fontFamily: 'inherit', fontWeight: 800, cursor: 'default' }}
         >
           퇴근하기
         </button>
@@ -232,13 +208,35 @@ function TodayCard() {
 }
 
 function MyAttendance() {
-  const [ym, setYm] = useState('2026-7')
+  const [ym, setYm] = useState(`${YEAR}-${TODAY.getMonth() + 1}`)
   const [week, setWeek] = useState(null)
-  const [calY, setCalY] = useState(2026)
-  const [calM, setCalM] = useState(6)
-  const [wMonth, setWMonth] = useState(7)
-  const [wWeek, setWWeek] = useState(3)
-  const [mYear, setMYear] = useState(2026)
+  const [calY, setCalY] = useState(YEAR)
+  const [calM, setCalM] = useState(TODAY.getMonth())
+  const [wMonth, setWMonth] = useState(TODAY.getMonth() + 1)
+  const [wWeek, setWWeek] = useState(Math.ceil(TODAY.getDate() / 7))
+  const [mYear, setMYear] = useState(YEAR)
+
+  // 내 근무 배정 — 달 단위 캐시. 기록 표(ym)·캘린더(calY/calM)·이번 달 요약이 쓴다.
+  const [duties, setDuties] = useState({}) // { 'y-m0': { 일: { code } } }
+  const dutyKey = (y, m0) => `${y}-${m0}`
+  const codeAt = (y, m0, d) => duties[dutyKey(y, m0)]?.[d]?.code
+  const wantMonths = [
+    dutyKey(Number(ym.split('-')[0]), Number(ym.split('-')[1]) - 1),
+    dutyKey(calY, calM),
+    dutyKey(YEAR, TODAY.getMonth()),
+  ]
+  useEffect(() => {
+    let alive = true
+    wantMonths.forEach((k) => {
+      if (duties[k]) return
+      const [y, m0] = k.split('-').map(Number)
+      fetchMyMonthDuties(y, m0)
+        .then((map) => { if (alive) setDuties((s) => ({ ...s, [k]: map })) })
+        .catch(() => { if (alive) setDuties((s) => ({ ...s, [k]: {} })) })
+    })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantMonths.join(',')])
 
   // ── 출퇴근 기록: 선택한 달의 주차별 7일 ──
   const [yy, mm] = ym.split('-').map(Number)
@@ -261,49 +259,47 @@ function MyAttendance() {
     cur.setDate(cur.getDate() + 7)
   }
   let defIdx = 0
-  if (yy === 2026 && mIdx === 6) {
-    const f = weeks.findIndex((w) => w.some((x) => x.getDate() === 20))
+  if (yy === YEAR && mIdx === TODAY.getMonth()) {
+    const f = weeks.findIndex((w) => w.some(
+      (x) => x.getDate() === TODAY.getDate() && x.getMonth() === mIdx))
     defIdx = f < 0 ? 0 : f
   }
   const weekIdx = week == null ? defIdx : Math.max(0, Math.min(weeks.length - 1, week))
 
+  // 근무코드는 실데이터, 출퇴근 기록은 백엔드 연동 전 — 미래는 예정, 과거·오늘은 미체크/휴무
   const genRow = (dt) => {
     const m = dt.getMonth(), d = dt.getDate(), wd = dt.getDay()
     const other = m !== mIdx
     const date = `${m + 1}/${d} (${WL[wd]})`
-    let r
-    if (wd === 0 || wd === 6) r = { date, code: 'OFF', in: '', out: '', dur: '—', st: 'leave', we: true }
-    else {
-      const code = CODE_SEQ[d % CODE_SEQ.length]
-      const day0 = new Date(dt.getFullYear(), m, d)
-      if (day0 > TODAY) r = { date, code, in: '', out: '', dur: '—', st: 'sched' }
-      else if (day0.getTime() === TODAY.getTime()) r = { date, code: 'D1', in: '07:58', out: '', dur: '—', st: 'normal' }
-      else {
-        const late = (d * 3 + m) % 11 === 0
-        r = { date, code, in: late ? `08:1${d % 6}` : IN_MAP[code], out: OUT_MAP[code], dur: `9:0${d % 6}`, st: late ? 'late' : 'normal' }
-      }
+    const code = other ? '' : (codeAt(dt.getFullYear(), m, d) ?? '')
+    const cat = CODE_CAT[code]
+    const isOff = cat === 'off' || cat === 'ws' || cat === 'lv'
+    const day0 = new Date(dt.getFullYear(), m, d)
+    const st = isOff ? 'leave' : day0 > TODAY ? 'sched' : 'miss'
+    return {
+      date, code, in: '', out: '', dur: '—', st,
+      we: wd === 0 || wd === 6,
+      other, over: '—', overColor: '#C9C9D2', overW: 700,
     }
-    // 초과 계산 (기준 9시간)
-    let over = '—', overColor = '#C9C9D2', overW = 700
-    if (r.dur && r.dur !== '—') {
-      const [h, mn] = r.dur.split(':')
-      const mins = +h * 60 + +mn - 540
-      if (mins > 0) { over = `+${Math.floor(mins / 60)}:${pad(mins % 60)}`; overColor = '#C97A17'; overW = 800 }
-    }
-    return { ...r, other, over, overColor, overW }
   }
   const rows = weeks[weekIdx].map(genRow)
 
-  // ── 이번 달 요약 ──
+  // ── 이번 달 요약 — 근무 구성은 실데이터(배정), 기록 기반 항목은 연동 전이라 '—' ──
+  const curDuties = duties[dutyKey(YEAR, TODAY.getMonth())] ?? {}
+  const catCount = (cats) =>
+    Object.values(curDuties).filter((v) => cats.includes(CODE_CAT[v.code])).length
+  const workDays = catCount(['m', 'd', 'n', 't', 'ec'])
+  const offDays = catCount(['off', 'ws'])
+  const leaveDays = catCount(['lv'])
   const summary = [
-    { label: '근무일', color: '#3F91D0', val: '15일', valColor: '#15151D' },
-    { label: '휴무', color: '#B0B0BC', val: '6일', valColor: '#9C8B93' },
-    { label: '휴가', color: '#E0A04A', val: '1일', valColor: '#C08A2E' },
-    { label: '지각', color: '#E0913A', val: '1회', valColor: '#C97A17' },
-    { label: '조퇴', color: '#E8806E', val: '0회', valColor: '#4E4E5E' },
-    { label: '미입력', color: '#8A8A98', val: '1회', valColor: '#6E6E80' },
-    { label: '총 근무시간', color: '#5350E2', val: '138h', valColor: '#5350E2' },
-    { label: '초과시간', color: '#1F9D6B', val: '+2:20', valColor: '#1F9D6B' },
+    { label: '근무일', color: '#3F91D0', val: `${workDays}일`, valColor: '#15151D' },
+    { label: '휴무', color: '#B0B0BC', val: `${offDays}일`, valColor: '#9C8B93' },
+    { label: '휴가', color: '#E0A04A', val: `${leaveDays}일`, valColor: '#C08A2E' },
+    { label: '지각', color: '#E0913A', val: '—', valColor: '#9C9CAB' },
+    { label: '조퇴', color: '#E8806E', val: '—', valColor: '#9C9CAB' },
+    { label: '미입력', color: '#8A8A98', val: '—', valColor: '#9C9CAB' },
+    { label: '총 근무시간', color: '#5350E2', val: '—', valColor: '#9C9CAB' },
+    { label: '초과시간', color: '#1F9D6B', val: '—', valColor: '#9C9CAB' },
   ]
 
   // ── 캘린더 ──
@@ -314,44 +310,37 @@ function MyAttendance() {
   for (let d = 1; d <= calDim; d++) {
     const dt = new Date(calY, calM, d)
     const wd = dt.getDay()
-    const we = wd === 0 || wd === 6
-    const code = we ? 'OFF' : CODE_SEQ[d % CODE_SEQ.length]
+    const code = codeAt(calY, calM, d) ?? ''
     const cc = CAT[CODE_CAT[code]]
-    const isT = calY === 2026 && calM === 6 && d === 20
-    const past = dt < TODAY
-    const isOff = code === 'OFF'
+    const isT = dt.getTime() === TODAY.getTime()
+    const isOff = (CODE_CAT[code] ?? 'off') === 'off'
     calCells.push({
       d, code, isT,
       dayColor: wd === 0 ? '#D06A6A' : wd === 6 ? '#5A7FD0' : '#3A3A46',
-      inTime: past && !we ? IN_MAP[code] : isT ? '07:58' : null,
-      outTime: past && !we ? OUT_MAP[code] : null,
-      ot: past && !we && calM === 6 ? OT_MAP[d] : null,
+      // 출퇴근 기록은 백엔드 연동 전 — 표시 없음
+      inTime: null,
+      outTime: null,
+      ot: null,
       // 코드는 배지 대신 작은 색 점 + 텍스트
-      dotColor: isOff ? '#C6C9D2' : cc.dot,
-      codeColor: isOff ? '#B4B7C0' : cc.tx,
+      dotColor: isOff || !cc ? '#C6C9D2' : cc.dot,
+      codeColor: isOff || !cc ? '#B4B7C0' : cc.tx,
     })
   }
 
-  // ── 근무시간 차트 데이터 ──
-  const wseed = wMonth * 100 + wWeek * 10
-  let wReal = 0, wOt = 0
-  const weekData = ['월', '화', '수', '목', '금', '토', '일'].map((d, i) => {
-    if (i >= 5) return { label: d, base: 0, ot: 0 }
-    const base = 8.0
-    const ot = Math.round((0.6 + rnd(wseed + i) * 1.3) * 10) / 10
-    wReal += base + ot
-    wOt += ot
-    return { label: d, base, ot }
-  })
-  const monthData = Array.from({ length: 12 }, (_, i) => {
-    const m = i + 1
-    let base = 0, ot = 0
-    if (mYear !== 2026 || m <= 7) {
-      base = 110 + Math.round(rnd(mYear * 100 + m) * 45)
-      ot = 8 + Math.round(rnd(mYear * 77 + m) * 24)
-    }
-    return { label: `${m}월`, base, ot }
-  })
+  // ── 이번 달 근무 구성 (도넛) — 실제 배정 일수 기준 ──
+  const compData = [
+    { name: '주간', value: catCount(['d']) },
+    { name: '야간', value: catCount(['n']) },
+    { name: '조기', value: catCount(['m']) },
+    { name: '탑승', value: catCount(['t']) },
+    { name: '휴무', value: catCount(['off', 'ws', 'lv']) },
+  ]
+
+  // ── 근무시간 차트 데이터 — 출퇴근 기록 백엔드 연동 전이라 0 (빈 스텁만 보인다) ──
+  const wReal = 0
+  const wOt = 0
+  const weekData = ['월', '화', '수', '목', '금', '토', '일'].map((d) => ({ label: d, base: 0, ot: 0 }))
+  const monthData = Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}월`, base: 0, ot: 0 }))
 
   return (
     <div>
@@ -366,7 +355,7 @@ function MyAttendance() {
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
               <select style={selStyle} value={ym} onChange={(e) => { setYm(e.target.value); setWeek(null) }}>
                 {Array.from({ length: 12 }, (_, i) => (
-                  <option key={i} value={`2026-${i + 1}`}>2026년 {i + 1}월</option>
+                  <option key={i} value={`${YEAR}-${i + 1}`}>{YEAR}년 {i + 1}월</option>
                 ))}
               </select>
               <div style={{ display: 'inline-flex', background: '#F0F0F5', border: '1px solid #E8E8EF', borderRadius: 11, padding: 4, gap: 2 }}>
@@ -395,7 +384,7 @@ function MyAttendance() {
           {rows.map((w) => (
             <div key={w.date} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', alignItems: 'center', padding: '11px 22px', borderBottom: '1px solid #F4F4F7' }}>
               <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: w.other ? '#C2C2CC' : w.we ? '#C77' : '#4E4E5E' }}>{w.date}</div>
-              <div style={{ display: 'flex', justifyContent: 'center' }}><span style={codeBadge(w.code)}>{w.code}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}><span style={codeBadge(w.code)}>{w.code || '—'}</span></div>
               <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 13, fontWeight: 600, color: w.in ? '#15151D' : '#C9C9D2' }}>{w.in || '—'}</div>
               <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 13, fontWeight: 600, color: w.out ? '#15151D' : '#C9C9D2' }}>{w.out || '—'}</div>
               <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 13, fontWeight: 700, color: '#4E4E5E' }}>{w.dur}</div>
@@ -410,7 +399,7 @@ function MyAttendance() {
         <div style={{ ...card, padding: '18px 22px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
             <span style={{ fontSize: 15, fontWeight: 800 }}>이번 달 요약</span>
-            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#5350E2', background: '#F1F1FF', border: '1px solid #DEDCFF', borderRadius: 99, padding: '3px 11px' }}>7월</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 800, color: '#5350E2', background: '#F1F1FF', border: '1px solid #DEDCFF', borderRadius: 99, padding: '3px 11px' }}>{TODAY.getMonth() + 1}월</span>
           </div>
           {summary.map((s) => (
             <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minHeight: 40, borderTop: '1px solid #F4F4F7' }}>
@@ -561,7 +550,7 @@ function MyAttendance() {
               <PieChart>
                 {/* Chart.js 시안과 동일: 12시에서 시계 방향, 흰 경계 2px */}
                 <Pie
-                  data={COMP_DATA}
+                  data={compData}
                   dataKey="value"
                   nameKey="name"
                   startAngle={90}
@@ -593,7 +582,7 @@ function MyAttendance() {
                     )
                   }}
                 >
-                  {COMP_DATA.map((d, i) => <Cell key={d.name} fill={COMP_COLORS[i]} />)}
+                  {compData.map((d, i) => <Cell key={d.name} fill={COMP_COLORS[i]} />)}
                 </Pie>
                 <Tooltip content={<CompTooltip />} />
                 <Legend
@@ -602,7 +591,7 @@ function MyAttendance() {
                   verticalAlign="middle"
                   content={() => (
                     <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {COMP_DATA.map((d, i) => (
+                      {compData.map((d, i) => (
                         <li key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <span style={{ width: 10, height: 10, background: COMP_COLORS[i], flex: 'none' }} />
                           <span style={{ fontSize: 12.5, fontWeight: 700, color: '#4E4E5E' }}>
@@ -622,7 +611,7 @@ function MyAttendance() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 11px', borderRadius: 99, background: '#5350E2', color: '#fff', fontSize: 12, fontWeight: 800 }}>월간</span>
             <select style={selStyle} value={mYear} onChange={(e) => setMYear(+e.target.value)}>
-              {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}년</option>)}
+              {[YEAR - 2, YEAR - 1, YEAR].map((y) => <option key={y} value={y}>{y}년</option>)}
             </select>
             <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: '#9C9CAB' }}>월별 총 근무시간</span>
           </div>

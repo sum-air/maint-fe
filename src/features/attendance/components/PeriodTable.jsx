@@ -1,5 +1,5 @@
 import { MONO } from '../../../shared/lib/workCodes.js'
-import { ATT_ROSTER, groupByTeam, weekStats, monthStats } from '../utils.js'
+import { groupByTeam, weekStats, monthStats } from '../utils.js'
 
 // 지각/결근 배지 (0이면 회색 대시)
 const CountChip = ({ n, color, bg }) =>
@@ -17,8 +17,9 @@ const UnChip = ({ n }) =>
   )
 
 // 주간/월간 집계 표. 주간(mode='week')은 주 52시간 진행 바가 추가된다.
-function PeriodTable({ mode, month, week }) {
-  const teams = groupByTeam(ATT_ROSTER)
+// rows: buildDailyRows 결과 (실데이터 인원)
+function PeriodTable({ rows = [], mode, month, week }) {
+  const teams = groupByTeam(rows)
   const heads =
     mode === 'week'
       ? ['이름 · 직급', '근무일', '지각', '결근', '미체크', '초과', '총 근무시간 · 주 52h']

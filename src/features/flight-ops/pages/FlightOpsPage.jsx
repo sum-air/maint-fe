@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
 import { fetchFlights } from '../api.js'
-import { APT, FLT_ST, FLEET, AIRPORT_OPTS, actColor, mapFlights, todayKst, kstDateOf } from '../utils.js'
+import { APT, FLT_ST, airportOptsOf, actColor, mapFlights, todayKst, kstDateOf } from '../utils.js'
 import './flight-ops.css'
 
 // 여객기 아이콘 (아웃라인, 진행 방향 45°) — 운항중·도착 트랙 공용
@@ -38,8 +38,7 @@ function AptBlock({ code, sched, act, schedLabel, actLabel, dim }) {
   )
 }
 
-// 티켓 한 행 — 운항중 진행률은 데모 데이터 고정값.
-// movement API 연동 시 갱신된 pct 를 내려주면 CSS transition 으로 스르륵 전진한다.
+// 티켓 한 행 — 진행률(pct)은 mapFlights 가 실제 출발~예상 도착 사이 현재 시각 위치로 계산한다.
 function TicketRow({ leg }) {
   const cur = leg.st === '운항중'
   const pct = leg.pct ?? 0
@@ -113,8 +112,7 @@ function TicketRow({ leg }) {
             </span>
           )}
         </div>
-        {/* PAX | FUEL 2열 — 급유 없는 편은 0kg, 스팟이 있으면 호버로 표시.
-            atlas 응답에는 아직 없는 필드라 실데이터에선 '—' (백엔드 필드 추가 요청 상태) */}
+        {/* PAX | FUEL 2열 — 값 없는 편은 '—', 스팟이 있으면 호버로 표시 */}
         <div className="fo-stats">
           <div>
             <div className="fo-statlb">PAX</div>
@@ -141,7 +139,7 @@ function TicketRow({ leg }) {
 }
 
 // 실시간 운항 — 항공기 등록부호 탭 + 구간 필터 + 보딩패스 티켓 스택.
-// 데이터는 atlas /flights (GMT 운항일) — 연결 실패 시 데모 데이터로 폴백해 화면 작업은 계속 가능하다.
+// 데이터는 atlas /flights (GMT 운항일) — 연결 실패 시 오류 배너와 빈 목록.
 function FlightOpsPage() {
   const [fleet, setFleet] = useState(null) // null = 로딩 중
   const [apiErr, setApiErr] = useState(null)
@@ -171,7 +169,7 @@ function FlightOpsPage() {
         setFleet(mapFlights(rows))
         setApiErr(null)
       })
-      .catch((e) => { if (alive) { setFleet(FLEET); setApiErr(e) } })
+      .catch((e) => { if (alive) { setFleet({}); setApiErr(e) } })
     return () => { alive = false }
   }, [date])
 
@@ -183,7 +181,8 @@ function FlightOpsPage() {
     return (!depF || from === depF) && (!arrF || to === arrF)
   })
 
-  const labelOf = (key) => AIRPORT_OPTS.find((o) => o.key === key)?.label ?? '전체'
+  const airportOpts = airportOptsOf(fleet)
+  const labelOf = (key) => airportOpts.find((o) => o.key === key)?.label ?? '전체'
 
   return (
     <section>
@@ -205,7 +204,7 @@ function FlightOpsPage() {
 
       {apiErr && (
         <div style={{ marginTop: 14, padding: '9px 14px', borderRadius: 10, background: '#FBEFD9', color: '#C97A17', fontSize: 12, fontWeight: 700 }}>
-          atlas 연결 실패 — {apiErr.message} · 데모 데이터를 표시 중입니다
+          운항 정보를 불러오지 못했습니다 — {apiErr.message}
         </div>
       )}
 
@@ -245,7 +244,7 @@ function FlightOpsPage() {
                   <>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 65 }} onClick={() => setOpenMenu(null)} />
                     <div className="fo-fmenu">
-                      {AIRPORT_OPTS.map((o) => (
+                      {airportOpts.map((o) => (
                         <button
                           key={o.key ?? '_all'}
                           type="button"

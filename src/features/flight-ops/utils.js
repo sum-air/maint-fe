@@ -1,6 +1,4 @@
-// 실시간 운항 — 상태·노선 정의 + 임시 데이터
-// 항공기 등록부호별 스케줄. 백엔드 movement API 연동 시 FLEET 를 API 응답으로 교체한다.
-// XU2591~2598: 김포(GMP) ↔ 사천(HIN) 왕복 8편 (홀수편 김포→사천, 짝수편 사천→김포)
+// 실시간 운항 — 상태·노선 정의 + atlas /flights 응답 매핑
 
 export const APT = {
   G: { name: '김포', code: 'GMP' },
@@ -15,33 +13,15 @@ export const FLT_ST = {
   결항: { c: '#D23B3B', b: '#FBE6E6' },
 }
 
-// std/sta: 계획, ad/aa: 실제 출발/도착 (빈 값 = 아직 없음)
-// 데모 시각 14:50 기준 — XU2595 운항중(40%), 이후 편은 예정
-export const FLEET = {
-  HL5264: [
-    { fno: 'XU2591', dir: 'GH', std: '07:20', sta: '08:35', ad: '07:26', aa: '08:39', st: '도착', pax: 68, fuel: 2600, spot: '228' },
-    { fno: 'XU2592', dir: 'HG', std: '09:05', sta: '10:20', ad: '09:04', aa: '10:23', st: '도착', pax: 72, fuel: 0, dl: 'VW0003', si: 'DLA/VW03 - GO AROUND 1 TIME' },
-    { fno: 'XU2593', dir: 'GH', std: '10:50', sta: '12:05', ad: '10:52', aa: '12:04', st: '도착', pax: 54, fuel: 2600, spot: '228' },
-    { fno: 'XU2594', dir: 'HG', std: '12:30', sta: '13:45', ad: '12:38', aa: '13:51', st: '도착', pax: 61, fuel: 0, dl: 'NA0014', si: 'T/O DLA DUE TO MIL TRAINING AT HIN APO' },
-    { fno: 'XU2595', dir: 'GH', std: '14:20', sta: '15:35', ad: '14:22', aa: '', eta: '15:37', st: '운항중', pct: 40, pax: 66, fuel: 2600, spot: '228' },
-    { fno: 'XU2596', dir: 'HG', std: '16:05', sta: '17:20', ad: '', aa: '', st: '예정', pax: 58, fuel: 0 },
-    { fno: 'XU2597', dir: 'GH', std: '17:50', sta: '19:05', ad: '', aa: '', st: '예정', pax: 49, fuel: 2600, spot: '228' },
-    { fno: 'XU2598', dir: 'HG', std: '19:35', sta: '20:50', ad: '', aa: '', st: '예정', pax: 63, fuel: 0 },
-  ],
-  HL5263: [
-    { fno: 'XU2581', dir: 'GH', std: '11:30', sta: '12:45', ad: '11:33', aa: '12:47', st: '도착', pax: 57, fuel: 2450, spot: '231' },
-    { fno: 'XU2582', dir: 'HG', std: '13:20', sta: '14:35', ad: '13:26', aa: '14:41', st: '도착', pax: 64, fuel: 0 },
-    { fno: 'XU2583', dir: 'GH', std: '15:10', sta: '16:25', ad: '', aa: '', st: '지연', pax: 70, fuel: 2450, spot: '231', dl: 'WX', si: 'DLA DUE TO WX AT HIN APO' },
-    { fno: 'XU2584', dir: 'HG', std: '17:00', sta: '18:15', ad: '', aa: '', st: '예정', pax: 52, fuel: 0 },
-  ],
+// 출발/도착 공항 필터 옵션 — 화면에 로드된 편들에서 유도한다 (null = 전체)
+export const airportOptsOf = (fleet) => {
+  const keys = new Set()
+  Object.values(fleet ?? {}).forEach((legs) => legs.forEach((l) => {
+    keys.add(l.dir[0])
+    keys.add(l.dir[1])
+  }))
+  return [{ key: null, label: '전체' }, ...[...keys].map((k) => ({ key: k, label: APT[k]?.name ?? k }))]
 }
-
-// 출발/도착 공항 필터 옵션 (null = 전체)
-export const AIRPORT_OPTS = [
-  { key: null, label: '전체' },
-  { key: 'G', label: '김포' },
-  { key: 'H', label: '사천' },
-]
 
 // 실제 시각 색상 — 계획보다 늦으면 빨강, 빠르면 파랑, 같으면 기본
 export const actColor = (sched, act) => {
@@ -53,7 +33,6 @@ export const actColor = (sched, act) => {
 
 // ── atlas /flights 응답 → 화면 leg 매핑 ──
 // 시각은 전부 UTC ISO 로 오고 KST 변환은 여기서만 한다.
-// PAX·FUEL·SPOT·SI 는 아직 응답에 없다 (백엔드 필드 추가 요청 상태) — 화면은 '—' 처리.
 
 const pad2 = (n) => String(n).padStart(2, '0')
 
@@ -105,6 +84,11 @@ export function mapFlights(rows) {
       ? Math.min(98, Math.max(2, Math.round(((Date.now() - depMs) / (arrMs - depMs)) * 100)))
       : undefined
 
+    // SI 스트립 — 전문 SI(영문)를 우선 잇고, 없으면 사람이 쓴 한글 사유(지연→비정상 순)
+    const siTexts = (f.supplementaryInfo ?? []).map((s) => s.content).filter(Boolean)
+    const si = siTexts.join(' · ')
+      || f.reasons?.departureDelay || f.reasons?.arrivalDelay || f.reasons?.irregularity || ''
+
     const leg = {
       fno: f.flightNumber,
       dir: `${aptKey(f.departureAirport)}${aptKey(f.arrivalAirport)}`,
@@ -116,6 +100,11 @@ export function mapFlights(rows) {
       st,
       pct,
       dl: f.irregularityCode ?? '',
+      // 탑승 인원 — 출발 전엔 onBoard 가 null 이라 예약(성인+소아)으로 대신 보여준다
+      pax: f.passengers?.onBoard ?? f.passengers?.reserved ?? null,
+      // 램프 연료 — 실적이 있으면 실적, 아니면 계획
+      fuel: f.actualFuel?.rampKg ?? f.plannedFuel?.rampKg ?? null,
+      si,
       spot: f.arrivalSpot ?? f.departureSpot ?? '', // 도착 주기장 우선 (FUEL 호버 툴팁)
     }
     ;(byReg[f.registration ?? '미지정'] ??= []).push(leg)

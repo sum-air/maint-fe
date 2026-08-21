@@ -1,17 +1,18 @@
 import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
-import { OT_ST, MY_REQS, dateWithDow, fmtHM, monthOf } from '../utils.js'
+import { OT_ST, INITIAL_MY_REQS, dateWithDow, fmtHM, monthOf } from '../utils.js'
 import RequestModal from './RequestModal.jsx'
 
+const TODAY = new Date()
 
 // 내 시간외근무 — 스탯 4개 + 신청 버튼 + 내역 테이블 (디자인 근무자 1a)
 function MyOvertime() {
-  const [reqs, setReqs] = useState(MY_REQS)
-  const [year, setYear] = useState(2026)
-  const [month, setMonth] = useState(7) // 조회 월
+  const [reqs, setReqs] = useState(INITIAL_MY_REQS)
+  const [year, setYear] = useState(TODAY.getFullYear())
+  const [month, setMonth] = useState(TODAY.getMonth() + 1) // 조회 월
   const [calOpen, setCalOpen] = useState(false)
-  const [pickYear, setPickYear] = useState(2026)
+  const [pickYear, setPickYear] = useState(TODAY.getFullYear())
   const [modalOpen, setModalOpen] = useState(false)
   const [viewMode, setViewMode] = useState('list') // list | cal
 
@@ -29,13 +30,23 @@ function MyOvertime() {
     }
   }
 
-  // 선택한 달의 내역만 (임시 데이터는 2026년)
-  const monthReqs = reqs.filter((r) => year === 2026 && monthOf(r.date) === month)
+  // 선택한 달의 내역만 ("MM.DD" 키 체계라 올해 것만 존재한다)
+  const monthReqs = reqs.filter((r) => year === TODAY.getFullYear() && monthOf(r.date) === month)
 
-  // 이번 주(데모: 7월 20일 = 3주) 시간외 — 백엔드 연동 시 실제 주차/합계로 교체
-  const WEEK_NO = 3
+  // 이번 주(월요일 시작) 시간외 — 오늘이 속한 주의 승인·대기 건 합계
+  const weekStart = new Date(TODAY)
+  weekStart.setDate(TODAY.getDate() - ((TODAY.getDay() + 6) % 7))
+  weekStart.setHours(0, 0, 0, 0)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + 7)
+  const inThisWeek = (mmdd) => {
+    const [m, d] = mmdd.split('.').map(Number)
+    const dt = new Date(TODAY.getFullYear(), m - 1, d)
+    return dt >= weekStart && dt < weekEnd
+  }
+  const WEEK_NO = Math.ceil((TODAY.getDate() + new Date(TODAY.getFullYear(), TODAY.getMonth(), 1).getDay()) / 7)
   const weekOt = reqs
-    .filter((r) => r.end && r.status !== 'no' && ['07.20', '07.17', '07.15'].includes(r.date))
+    .filter((r) => r.end && r.status !== 'no' && inThisWeek(r.date))
     .reduce((s, r) => s + hoursBetween(r.start, r.end), 0)
   const monthOt = monthReqs.filter((r) => r.end && r.status !== 'no').reduce((s, r) => s + hoursBetween(r.start, r.end), 0)
   const okN = monthReqs.filter((r) => r.status === 'ok').length

@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
-import { OT_ST, ADMIN_REQS, groupReqsByTeam, dateWithDow, fmtHM, monthOf } from '../utils.js'
+import { OT_ST, INITIAL_ADMIN_REQS, groupReqsByTeam, dateWithDow, fmtHM, monthOf } from '../utils.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
+const TODAY = new Date()
 
 // 팀 시간외 관리 — 요약 칩 + 팀 그룹 테이블(월 누적) + 대기 건 승인/반려 + 인원/일자 필터
 function AdminOvertime() {
-  // 승인/반려 결정 (데모: 화면 상태 — 백엔드 연동 시 API)
+  // 승인/반려 결정 (백엔드 연동 시 API — 지금은 화면 상태)
   const [decisions, setDecisions] = useState({})
-  const [year, setYear] = useState(2026)
-  const [month, setMonth] = useState(7) // 조회 월
+  const [year, setYear] = useState(TODAY.getFullYear())
+  const [month, setMonth] = useState(TODAY.getMonth() + 1) // 조회 월
   const [calOpen, setCalOpen] = useState(false)
-  const [pickYear, setPickYear] = useState(2026)
+  const [pickYear, setPickYear] = useState(TODAY.getFullYear())
   const [filterTeams, setFilterTeams] = useState([]) // 빈 배열 = 전체 (복수 선택)
   const [filterNames, setFilterNames] = useState([])
   const [filterDates, setFilterDates] = useState([]) // "MM.DD" 배열
@@ -36,8 +37,8 @@ function AdminOvertime() {
     }
   }
 
-  // 선택한 달의 접수 건만 (임시 데이터는 2026년)
-  const withStatus = ADMIN_REQS.filter((r) => year === 2026 && monthOf(r.date) === month).map((r) => ({
+  // 선택한 달의 접수 건만 ("MM.DD" 키 체계라 올해 것만 존재한다)
+  const withStatus = INITIAL_ADMIN_REQS.filter((r) => year === TODAY.getFullYear() && monthOf(r.date) === month).map((r) => ({
     ...r,
     status: decisions[`${r.name}_${r.date}`] ?? r.status,
     hours: hoursBetween(r.start, r.end),

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MONO } from '../lib/workCodes.js'
 
-const YEAR = 2026 // 데모 기준 연도 — 백엔드 연동 시 오늘 날짜로 교체
+const YEAR = new Date().getFullYear() // "MM.DD" 키 체계라 연도는 항상 올해다
 const pad = (n) => String(n).padStart(2, '0')
 
 const navBtn = {

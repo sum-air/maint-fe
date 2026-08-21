@@ -4,8 +4,8 @@ import ShiftEditModal from '../components/ShiftEditModal.jsx'
 import CodeGuide from '../components/CodeGuide.jsx'
 import StatsView from '../components/StatsView.jsx'
 import DailyView from '../components/DailyView.jsx'
-import { TEAMS, CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
-import { fetchEmployees } from '../../../shared/lib/employees.js'
+import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
+import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchDutyAssignments, saveDutyAssignments, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
 import { getTokenClaims } from '../../../shared/lib/api.js'
 import './schedule.css'
@@ -21,12 +21,6 @@ const BASE = { year: TODAY.getFullYear(), month: TODAY.getMonth() }
 
 // 단축키 안내용 수정키 표기 — 동작은 Cmd/Ctrl 둘 다 받지만(metaKey||ctrlKey) 표기는 OS 를 따른다
 const MOD_KEY = /Mac|iP(hone|ad|od)/.test(navigator.platform) ? '⌘' : 'Ctrl'
-
-// 팀별 수동 표시 순서 (사번) — 직급·이름으로 도출되지 않는 팀 내 관행 순서.
-// 여기 없는 인원은 직급 서열 → 이름순으로 목록 뒤에 붙는다. 인사이동 시 갱신 필요.
-const MEMBER_ORDER = {
-  운항정비팀: ['200342', '200133', '200454', '200315', '200321', '200272'], // 차면규 문지환 김찬수 오정훈 오명열 김동민
-}
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -48,41 +42,15 @@ function SchedulePage() {
 
   const [selDay, setSelDay] = useState(TODAY.getDate()) // 일간 뷰에서 보는 날짜
 
-  // 인원 축 실데이터 — atlas /employees (ERP 동기화 사본). 근무 코드는 아직 백엔드
-  // 원천이 없어 셀은 비워둔다 (편집 모달로 채우는 로컬 overrides 만 표시).
+  // 인원 축 실데이터 — 공용 정비 로스터 (표시 순서까지 정렬돼 온다).
+  // 행 인덱스(pi) 기반 범위선택·고정이 "화면 인접 행 = 인접 인덱스"를 전제하므로
+  // 배열 순서가 곧 표시 순서여야 한다.
   const [people, setPeople] = useState(null)
   const [loadError, setLoadError] = useState(false)
   useEffect(() => {
     let alive = true
-    fetchEmployees({ status: 'ACTIVE' })
-      .then((list) => {
-        if (!alive) return
-        // 정비본부(본부장)는 스케줄 대상이 아니라 제외
-        const maint = list.filter((e) => e.departmentName?.includes('정비') && e.departmentName !== '정비본부')
-        // 배열을 팀 순서(TEAMS)대로 묶어서 정렬 — 행 인덱스(pi) 기반 범위선택·고정이
-        // 화면 인접 행 = 인접 인덱스를 전제하므로 표시 순서와 배열 순서가 같아야 한다.
-        // 팀 안에서는 직급 서열(ERP grade.code 오름차순 = 부장→차장→과장→대리→사원),
-        // 같은 직급이면 이름순. 직급 미입력자는 맨 뒤.
-        const rank = (t) => { const i = TEAMS.indexOf(t); return i === -1 ? TEAMS.length : i }
-        const gradeRank = (e) => Number(e.grade?.code) || 999
-        const memberRank = (e) => {
-          const i = MEMBER_ORDER[e.departmentName]?.indexOf(e.employeeNo) ?? -1
-          return i === -1 ? 9999 : i
-        }
-        maint.sort((a, b) =>
-          rank(a.departmentName) - rank(b.departmentName) ||
-          memberRank(a) - memberRank(b) ||
-          gradeRank(a) - gradeRank(b) ||
-          a.koreanName.localeCompare(b.koreanName, 'ko'))
-        setPeople(maint.map((e) => ({
-          id: e.id, // 근무 배정 저장 시 employeeId 로 보낸다
-          team: e.departmentName,
-          departmentId: e.departmentId, // 편집 범위(지정 부서) 판단용
-          name: e.koreanName,
-          role: e.grade?.name, // 직급 — 미입력 직원은 표시 생략
-          employeeNo: e.employeeNo,
-        })))
-      })
+    fetchMaintRoster()
+      .then((list) => { if (alive) setPeople(list) })
       .catch(() => { if (alive) setLoadError(true) })
     return () => { alive = false }
   }, [])

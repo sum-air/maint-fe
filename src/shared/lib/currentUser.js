@@ -4,12 +4,13 @@
 import { getTokenClaims } from './auth.js'
 
 export const CURRENT_USER = {
-  name: '김기홍',
-  team: '섬에어 정비기획팀',
-  role: '사원',
-  initial: '김',
-  email: 'kihong.kim@sumair.kr',
-  employeeNo: '',
+  // 응답 전/실패 시 중립 표시 — 특정인 하드코딩을 두면 API 실패가 "다른 사람으로 보이는" 사고가 된다
+  name: '—',
+  team: '섬에어',
+  role: '',
+  initial: '·',
+  email: '',
+  employeeNo: getTokenClaims().employeeNo ?? '',
   // 토큰의 features 기준 — 로그인·dev 토큰 모두 access 토큰에 features 클레임이 실린다
   isAdmin: (getTokenClaims().features ?? []).includes('TENANT_ADMIN'),
 }

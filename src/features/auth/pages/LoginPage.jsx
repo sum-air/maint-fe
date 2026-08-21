@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { GOOGLE_CLIENT_ID, hasSession, loginWithGoogle } from '../../../shared/lib/auth.js'
+import { GOOGLE_CLIENT_ID, hasStoredSession, loginWithGoogle } from '../../../shared/lib/auth.js'
 import './login.css'
 
 // 로그인 — Google 계정(@sumair.kr)으로 신원을 확인하고 atlas 토큰을 받는다.
@@ -9,8 +9,9 @@ function LoginPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // 이미 세션이 있으면(뒤로가기 등) 홈으로
-    if (hasSession()) {
+    // 실로그인 세션이 이미 있으면(뒤로가기 등) 홈으로. dev 환경변수 토큰만 있는 경우는
+    // 열어 둔다 — dev 에서도 실로그인을 시험할 수 있어야 한다.
+    if (hasStoredSession()) {
       window.location.replace('/')
       return
     }

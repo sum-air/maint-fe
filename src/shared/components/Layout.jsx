@@ -52,13 +52,8 @@ const MENUS = [
   },
 ]
 
-// 알림 임시 데이터 — 백엔드 연동 시 알림 API 로 교체
-const DEMO_NOTIFS = [
-  { id: 1, text: 'W/O-2508-012 작업이 배정되었습니다', time: '10분 전', unread: true },
-  { id: 2, text: '8월 12일 시간외근무가 승인되었습니다', time: '2시간 전', unread: true },
-  { id: 3, text: '내일 근무가 OFF 로 변경되었습니다', time: '어제', unread: true },
-  { id: 4, text: 'NRC-0225 가 종결되었습니다', time: '2일 전', unread: false },
-]
+// 알림 — 백엔드(notification)가 아직 없어 빈 목록으로 시작한다. API 가 생기면 여기서 조회한다.
+const INITIAL_NOTIFS = []
 
 function Header() {
   // 현재 경로에 해당하는 메뉴를 찾아 브레드크럼에 표시
@@ -82,7 +77,7 @@ function Header() {
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
-  const [notifs, setNotifs] = useState(DEMO_NOTIFS)
+  const [notifs, setNotifs] = useState(INITIAL_NOTIFS)
   const unread = notifs.filter((n) => n.unread).length
   const readAll = () => setNotifs((s) => s.map((n) => ({ ...n, unread: false })))
 
@@ -139,6 +134,11 @@ function Header() {
                     <button type="button" className="hd__notif-readall" onClick={readAll}>모두 읽음</button>
                   )}
                 </div>
+                {notifs.length === 0 && (
+                  <div className="hd__notif-row">
+                    <span className="hd__notif-text" style={{ color: '#9C9CAB' }}>새 알림이 없습니다</span>
+                  </div>
+                )}
                 {notifs.map((n) => (
                   <div key={n.id} className="hd__notif-row">
                     <span className="hd__notif-dot" style={{ background: n.unread ? '#5350E2' : 'transparent' }} />

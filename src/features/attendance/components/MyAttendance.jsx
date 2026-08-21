@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell, Legend } from 'recharts'
-import { CAT, CODE_CAT, MONO } from '../../../shared/lib/workCodes.js'
+import { CAT, CODE_CAT, TIMES, MONO } from '../../../shared/lib/workCodes.js'
 import { fetchMyMonthDuties } from '../../../shared/lib/roster.js'
+import { fetchMyWorkSessions, checkIn, checkOut, kstHM, durationHours } from '../../../shared/lib/attendance.js'
+import { weekMeta } from '../utils.js'
 
 // 내 출퇴근 (근무자 화면) — 오늘 근무 카드 + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
-// 근무코드는 실데이터(/duty-assignments)이고, 출퇴근 기록·집계·차트는 백엔드(work_session)
-// 연동 전이라 미체크/0 으로 표시한다.
+// 근무코드는 /duty-assignments, 출퇴근 기록은 /work-sessions 실데이터.
+// 집계·차트는 올해 내 세션 전체를 한 번 받아 화면에서 계산한다.
 
 const pad = (n) => String(n).padStart(2, '0')
 const WL = ['일', '월', '화', '수', '목', '금', '토']
@@ -133,12 +135,45 @@ const CompTooltip = ({ active, payload }) => {
 
 const card = { border: '1px solid #E5E5EC', borderRadius: 16, background: '#fff', boxShadow: '0 1px 2px rgba(21,21,29,.04)' }
 
+// 매초 흐르는 시계는 이 컴포넌트 안에만 둔다 —
+// 부모(MyAttendance)가 매초 다시 렌더링되면 차트가 애니메이션을 반복해 깜빡이기 때문.
+function useClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  return now
+}
+
+const fmtHMs = (ms) => {
+  const sec = Math.max(0, Math.floor(ms / 1000))
+  return `${pad(Math.floor(sec / 3600))}:${pad(Math.floor((sec % 3600) / 60))}`
+}
+
 // 오늘 근무 카드 — 보라 그라데이션 히어로 (링 게이지 + 날짜 + 출근/경과/남은 + 버튼)
-// 출퇴근 기록 백엔드(work_session) 연동 전이라 진행률·경과는 0/— 이고 버튼은 비활성이다.
-function TodayCard() {
-  const pct = 0
-  const elapsed = '—'
-  const remain = '—'
+// session: 오늘/열린 내 세션, todayCode: 오늘 근무코드 (계획 퇴근시각·진행률 계산용)
+function TodayCard({ session, todayCode, busy, onPunch }) {
+  const now = useClock()
+
+  const inMs = session ? Date.parse(session.checkedInAtUtc) : null
+  const outMs = session?.checkedOutAtUtc ? Date.parse(session.checkedOutAtUtc) : null
+  // 계획 퇴근 시각 — 오늘 근무코드의 종료 시각 (없으면 출근 +9시간)
+  const tt = todayCode ? TIMES[todayCode] : null
+  const planEndMs = inMs != null
+    ? (tt
+        ? new Date(now).setHours(tt[1] % 24, 0, 0, 0) + (tt[1] >= 24 ? 864e5 : 0)
+        : inMs + 9 * 3600e3)
+    : null
+
+  const closed = outMs != null
+  const elapsed = inMs == null ? '—' : fmtHMs((closed ? outMs : now.getTime()) - inMs)
+  const remain = inMs == null || closed ? '—' : fmtHMs(Math.max(0, planEndMs - now.getTime()))
+  const pct = inMs == null
+    ? 0
+    : closed
+      ? 100
+      : Math.max(0, Math.min(99, Math.round(((now.getTime() - inMs) / Math.max(1, planEndMs - inMs)) * 100)))
 
   // 링 게이지 (r=52 원 둘레 326.7 기준)
   const CIRC = 2 * Math.PI * 52
@@ -176,7 +211,7 @@ function TodayCard() {
           {TODAY.getMonth() + 1}월 {TODAY.getDate()}일 {WL[TODAY.getDay()]}요일
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 10, fontSize: 12.5, fontWeight: 700, opacity: 0.9 }}>
-          <span>출근 <span style={{ fontFamily: MONO, fontWeight: 800 }}>—</span></span>
+          <span>출근 <span style={{ fontFamily: MONO, fontWeight: 800 }}>{kstHM(session?.checkedInAtUtc) || '—'}</span></span>
           <span style={{ opacity: 0.5 }}>|</span>
           <span>경과 <span style={{ fontFamily: MONO, fontWeight: 800 }}>{elapsed}</span></span>
           <span style={{ opacity: 0.5 }}>|</span>
@@ -184,23 +219,35 @@ function TodayCard() {
         </div>
       </div>
 
-      {/* 출근/퇴근 버튼 — 출퇴근 기록 백엔드 연동 후 활성화 */}
+      {/* 출근/퇴근 버튼 — 상태에 맞는 쪽만 활성화 */}
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
         <button
           type="button"
-          disabled
-          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
-          style={{ height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12, background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', fontFamily: 'inherit', fontWeight: 800, cursor: 'default' }}
+          disabled={busy || session != null}
+          onClick={onPunch}
+          style={{
+            height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12,
+            fontFamily: 'inherit', fontWeight: 800,
+            ...(session == null
+              ? { background: '#fff', color: '#433FBB', cursor: 'pointer', opacity: busy ? 0.6 : 1 }
+              : { background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', cursor: 'default' }),
+          }}
         >
           출근하기
         </button>
         <button
           type="button"
-          disabled
-          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
-          style={{ height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12, background: 'rgba(255,255,255,.55)', color: 'rgba(67,63,187,.55)', fontFamily: 'inherit', fontWeight: 800, cursor: 'default' }}
+          disabled={busy || session == null || closed}
+          onClick={onPunch}
+          style={{
+            height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12,
+            fontFamily: 'inherit', fontWeight: 800,
+            ...(session != null && !closed
+              ? { background: '#fff', color: '#433FBB', cursor: 'pointer', opacity: busy ? 0.6 : 1 }
+              : { background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', cursor: 'default' }),
+          }}
         >
-          퇴근하기
+          {closed ? '근무 완료' : '퇴근하기'}
         </button>
       </div>
     </div>
@@ -215,6 +262,37 @@ function MyAttendance() {
   const [wMonth, setWMonth] = useState(TODAY.getMonth() + 1)
   const [wWeek, setWWeek] = useState(Math.ceil(TODAY.getDate() / 7))
   const [mYear, setMYear] = useState(YEAR)
+
+  // 내 출퇴근 세션 — 올해 전체를 한 번 받아 기록 표·캘린더·요약·차트가 나눠 쓴다.
+  const [sessions, setSessions] = useState([])
+  const [busy, setBusy] = useState(false)
+  const loadSessions = () =>
+    fetchMyWorkSessions(`${YEAR}-01-01`, `${YEAR}-12-31`)
+      .then(setSessions)
+      .catch(() => {})
+  useEffect(() => {
+    loadSessions()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const sessionByDate = {}
+  sessions.forEach((s) => { sessionByDate[s.workDate] = s })
+  const isoOf = (y, m0, d) => `${y}-${pad(m0 + 1)}-${pad(d)}`
+  const todaySession = sessions.find((s) => !s.checkedOutAtUtc)
+    ?? sessionByDate[isoOf(YEAR, TODAY.getMonth(), TODAY.getDate())] ?? null
+
+  const punch = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      if (todaySession && !todaySession.checkedOutAtUtc) await checkOut(todaySession.id)
+      else await checkIn()
+      await loadSessions()
+    } catch (e) {
+      alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // 내 근무 배정 — 달 단위 캐시. 기록 표(ym)·캘린더(calY/calM)·이번 달 요약이 쓴다.
   const [duties, setDuties] = useState({}) // { 'y-m0': { 일: { code } } }
@@ -266,7 +344,21 @@ function MyAttendance() {
   }
   const weekIdx = week == null ? defIdx : Math.max(0, Math.min(weeks.length - 1, week))
 
-  // 근무코드는 실데이터, 출퇴근 기록은 백엔드 연동 전 — 미래는 예정, 과거·오늘은 미체크/휴무
+  // 지각 판정 — 출근 시각(KST "HH:MM")이 근무코드의 계획 시작보다 늦은가
+  const isLate = (session, code) => {
+    const tt = TIMES[code]
+    if (!session?.checkedInAtUtc || !tt) return false
+    const [h, m] = kstHM(session.checkedInAtUtc).split(':').map(Number)
+    return h * 60 + m > (tt[0] % 24) * 60
+  }
+  const durText = (session) => {
+    const h = durationHours(session)
+    if (h == null) return '—'
+    const mins = Math.round(h * 60)
+    return `${Math.floor(mins / 60)}:${pad(mins % 60)}`
+  }
+
+  // 근무코드·출퇴근 기록 모두 실데이터 — 기록 없는 과거는 미체크, 미래는 예정
   const genRow = (dt) => {
     const m = dt.getMonth(), d = dt.getDate(), wd = dt.getDay()
     const other = m !== mIdx
@@ -275,31 +367,55 @@ function MyAttendance() {
     const cat = CODE_CAT[code]
     const isOff = cat === 'off' || cat === 'ws' || cat === 'lv'
     const day0 = new Date(dt.getFullYear(), m, d)
-    const st = isOff ? 'leave' : day0 > TODAY ? 'sched' : 'miss'
+    const session = other ? null : sessionByDate[isoOf(dt.getFullYear(), m, d)]
+    const st = session
+      ? (isLate(session, code) ? 'late' : 'normal')
+      : isOff ? 'leave' : day0 > TODAY ? 'sched' : 'miss'
+    const dur = session ? durText(session) : '—'
+    // 초과 계산 (기준 9시간)
+    let over = '—', overColor = '#C9C9D2', overW = 700
+    if (dur !== '—') {
+      const [h, mn] = dur.split(':')
+      const mins = +h * 60 + +mn - 540
+      if (mins > 0) { over = `+${Math.floor(mins / 60)}:${pad(mins % 60)}`; overColor = '#C97A17'; overW = 800 }
+    }
     return {
-      date, code, in: '', out: '', dur: '—', st,
+      date, code,
+      in: session ? kstHM(session.checkedInAtUtc) : '',
+      out: session?.checkedOutAtUtc ? kstHM(session.checkedOutAtUtc) : '',
+      dur, st,
       we: wd === 0 || wd === 6,
-      other, over: '—', overColor: '#C9C9D2', overW: 700,
+      other, over, overColor, overW,
     }
   }
   const rows = weeks[weekIdx].map(genRow)
 
-  // ── 이번 달 요약 — 근무 구성은 실데이터(배정), 기록 기반 항목은 연동 전이라 '—' ──
+  // ── 이번 달 요약 — 근무 구성은 배정, 기록 항목은 세션에서 계산 ──
   const curDuties = duties[dutyKey(YEAR, TODAY.getMonth())] ?? {}
   const catCount = (cats) =>
     Object.values(curDuties).filter((v) => cats.includes(CODE_CAT[v.code])).length
   const workDays = catCount(['m', 'd', 'n', 't', 'ec'])
   const offDays = catCount(['off', 'ws'])
   const leaveDays = catCount(['lv'])
+  const monthSessions = sessions.filter((s) => Number(s.workDate.slice(5, 7)) === TODAY.getMonth() + 1)
+  const lateN = monthSessions.filter((s) =>
+    isLate(s, curDuties[Number(s.workDate.slice(8))]?.code)).length
+  const totH = monthSessions.reduce((acc, s) => acc + (durationHours(s) ?? 0), 0)
+  const otH = monthSessions.reduce((acc, s) => acc + Math.max(0, (durationHours(s) ?? 0) - 9), 0)
+  // 미입력 = 이번 달 과거 근무일(배정 있음) 중 세션 없는 날
+  const missedN = Object.entries(curDuties).filter(([d, v]) =>
+    ['m', 'd', 'n', 't', 'ec'].includes(CODE_CAT[v.code])
+    && Number(d) < TODAY.getDate()
+    && !sessionByDate[isoOf(YEAR, TODAY.getMonth(), Number(d))]).length
   const summary = [
     { label: '근무일', color: '#3F91D0', val: `${workDays}일`, valColor: '#15151D' },
     { label: '휴무', color: '#B0B0BC', val: `${offDays}일`, valColor: '#9C8B93' },
     { label: '휴가', color: '#E0A04A', val: `${leaveDays}일`, valColor: '#C08A2E' },
-    { label: '지각', color: '#E0913A', val: '—', valColor: '#9C9CAB' },
+    { label: '지각', color: '#E0913A', val: `${lateN}회`, valColor: lateN > 0 ? '#C97A17' : '#4E4E5E' },
     { label: '조퇴', color: '#E8806E', val: '—', valColor: '#9C9CAB' },
-    { label: '미입력', color: '#8A8A98', val: '—', valColor: '#9C9CAB' },
-    { label: '총 근무시간', color: '#5350E2', val: '—', valColor: '#9C9CAB' },
-    { label: '초과시간', color: '#1F9D6B', val: '—', valColor: '#9C9CAB' },
+    { label: '미입력', color: '#8A8A98', val: `${missedN}회`, valColor: '#6E6E80' },
+    { label: '총 근무시간', color: '#5350E2', val: `${Math.round(totH)}h`, valColor: '#5350E2' },
+    { label: '초과시간', color: '#1F9D6B', val: otH > 0 ? `+${otH.toFixed(1)}h` : '—', valColor: '#1F9D6B' },
   ]
 
   // ── 캘린더 ──
@@ -314,13 +430,14 @@ function MyAttendance() {
     const cc = CAT[CODE_CAT[code]]
     const isT = dt.getTime() === TODAY.getTime()
     const isOff = (CODE_CAT[code] ?? 'off') === 'off'
+    const session = sessionByDate[isoOf(calY, calM, d)]
+    const cellDur = durationHours(session)
     calCells.push({
       d, code, isT,
       dayColor: wd === 0 ? '#D06A6A' : wd === 6 ? '#5A7FD0' : '#3A3A46',
-      // 출퇴근 기록은 백엔드 연동 전 — 표시 없음
-      inTime: null,
-      outTime: null,
-      ot: null,
+      inTime: session ? kstHM(session.checkedInAtUtc) : null,
+      outTime: session?.checkedOutAtUtc ? kstHM(session.checkedOutAtUtc) : null,
+      ot: cellDur != null && cellDur > 9 ? `${(cellDur - 9).toFixed(1)}h` : null,
       // 코드는 배지 대신 작은 색 점 + 텍스트
       dotColor: isOff || !cc ? '#C6C9D2' : cc.dot,
       codeColor: isOff || !cc ? '#B4B7C0' : cc.tx,
@@ -336,16 +453,43 @@ function MyAttendance() {
     { name: '휴무', value: catCount(['off', 'ws', 'lv']) },
   ]
 
-  // ── 근무시간 차트 데이터 — 출퇴근 기록 백엔드 연동 전이라 0 (빈 스텁만 보인다) ──
-  const wReal = 0
-  const wOt = 0
-  const weekData = ['월', '화', '수', '목', '금', '토', '일'].map((d) => ({ label: d, base: 0, ot: 0 }))
-  const monthData = Array.from({ length: 12 }, (_, i) => ({ label: `${i + 1}월`, base: 0, ot: 0 }))
+  // ── 근무시간 차트 데이터 — 세션에서 계산 (기준 9시간 초과 = 초과분) ──
+  const splitBaseOt = (h) => (h == null ? [0, 0] : [Math.min(9, h), Math.max(0, h - 9)])
+  const { start: wStart } = weekMeta(wMonth, wWeek)
+  let wReal = 0
+  let wOt = 0
+  const weekData = ['월', '화', '수', '목', '금', '토', '일'].map((label, i) => {
+    const dt = new Date(wStart)
+    dt.setDate(wStart.getDate() + i)
+    const session = sessionByDate[isoOf(dt.getFullYear(), dt.getMonth(), dt.getDate())]
+    const [base, ot] = splitBaseOt(durationHours(session))
+    wReal += base + ot
+    wOt += ot
+    return { label, base: Math.round(base * 10) / 10, ot: Math.round(ot * 10) / 10 }
+  })
+  const monthData = Array.from({ length: 12 }, (_, i) => {
+    if (mYear !== YEAR) return { label: `${i + 1}월`, base: 0, ot: 0 }
+    let base = 0
+    let ot = 0
+    sessions
+      .filter((s) => Number(s.workDate.slice(5, 7)) === i + 1)
+      .forEach((s) => {
+        const [b, o] = splitBaseOt(durationHours(s))
+        base += b
+        ot += o
+      })
+    return { label: `${i + 1}월`, base: Math.round(base), ot: Math.round(ot) }
+  })
 
   return (
     <div>
       {/* ── 오늘 근무 카드 (매초 갱신은 이 안에서만) ── */}
-      <TodayCard />
+      <TodayCard
+        session={todaySession}
+        todayCode={curDuties[TODAY.getDate()]?.code}
+        busy={busy}
+        onPunch={punch}
+      />
 
       {/* ── 출퇴근 기록 + 이번 달 요약 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'stretch' }}>

@@ -6,7 +6,9 @@ import MyAttendance from '../components/MyAttendance.jsx'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchMonthDutyMap } from '../../../shared/lib/roster.js'
-import { weekMeta, weekOfDate, buildDailyRows } from '../utils.js'
+import { fetchWorkSessions, kstHM, durationHours } from '../../../shared/lib/attendance.js'
+import { TIMES } from '../../../shared/lib/workCodes.js'
+import { weekMeta, weekOfDate, buildDailyRows, statsByEmployee, EMPTY_STATS } from '../utils.js'
 import './attendance.css'
 
 const TODAY = new Date()
@@ -44,13 +46,58 @@ function AttendancePage() {
       .catch(() => {})
     return () => { alive = false }
   }, [dayMonth])
-  const dailyRows = buildDailyRows(roster, (no) =>
-    dayMonth === dutyMap.month ? dutyMap.map[`${no}_${day.getDate()}`]?.code : undefined)
   const periodRows = buildDailyRows(roster, () => undefined)
 
   const dateLabel = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())} (${WEEK[day.getDay()]})`
   const shiftDay = (n) => setDay((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n))
   const { nWeeks, wk, rangeLabel } = weekMeta(wMonth, wWeek)
+
+  // 팀 관리용 세션 — 보고 있는 기간(일간=그날, 주간=그 주, 월간=그 달)을 조회한다.
+  // 서버가 조회 범위를 강제한다: 관리자=전체, 지정 팀장=지정 팀+본인, 일반=본인.
+  const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  let range
+  if (view === 'today') {
+    range = [isoDate(day), isoDate(day)]
+  } else if (view === 'week') {
+    const { start, end } = weekMeta(wMonth, wk)
+    range = [isoDate(start), isoDate(end)]
+  } else {
+    range = [`${YEAR}-${pad(mMonth)}-01`, `${YEAR}-${pad(mMonth)}-${pad(new Date(YEAR, mMonth, 0).getDate())}`]
+  }
+  const [adminSessions, setAdminSessions] = useState([])
+  useEffect(() => {
+    if (mode !== 'admin') return
+    let alive = true
+    fetchWorkSessions(range[0], range[1])
+      .then((list) => { if (alive) setAdminSessions(list) })
+      .catch(() => { if (alive) setAdminSessions([]) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, range[0], range[1]])
+
+  // 일간 표 — 배정 코드 + 그날 세션 병합 (지각 = 출근이 계획 시작보다 늦음)
+  const sessionByNo = {}
+  adminSessions.filter((s) => s.workDate === isoDate(day)).forEach((s) => { sessionByNo[s.employeeNo] = s })
+  const dailyRows = buildDailyRows(roster, (no) =>
+    dayMonth === dutyMap.month ? dutyMap.map[`${no}_${day.getDate()}`]?.code : undefined)
+    .map((r) => {
+      const s = sessionByNo[r.employeeNo]
+      if (!s) return r
+      const tt = TIMES[r.code]
+      const [ih, im] = kstHM(s.checkedInAtUtc).split(':').map(Number)
+      const late = tt && ih * 60 + im > (tt[0] % 24) * 60
+      const h = durationHours(s)
+      return {
+        ...r,
+        in: kstHM(s.checkedInAtUtc),
+        out: s.checkedOutAtUtc ? kstHM(s.checkedOutAtUtc) : '',
+        dur: h != null ? `${Math.floor(h)}:${pad(Math.round(h * 60) % 60)}` : '—',
+        st: late ? 'late' : 'normal',
+      }
+    })
+
+  const statsMap = statsByEmployee(adminSessions, durationHours)
+  const statsOf = (no) => statsMap[no] ?? EMPTY_STATS
 
   // ‹ › 통합 스테퍼: 뷰에 따라 하루/한 주/한 달씩 이동 (주간은 두 줄 표기)
   const stepLabel = view === 'today' ? dateLabel : `${YEAR}년 ${mMonth}월`
@@ -221,8 +268,8 @@ function AttendancePage() {
       <div style={{ marginTop: 18 }}>
         {mode === 'my' && <MyAttendance />}
         {mode === 'admin' && view === 'today' && <DailyTable rows={dailyRows} onOpen={setModal} edits={attEdits} />}
-        {mode === 'admin' && view === 'week' && <PeriodTable rows={periodRows} mode="week" month={wMonth} week={wk} />}
-        {mode === 'admin' && view === 'month' && <PeriodTable rows={periodRows} mode="month" month={mMonth} />}
+        {mode === 'admin' && view === 'week' && <PeriodTable rows={periodRows} mode="week" statsOf={statsOf} />}
+        {mode === 'admin' && view === 'month' && <PeriodTable rows={periodRows} mode="month" statsOf={statsOf} />}
       </div>
 
       {modal && (

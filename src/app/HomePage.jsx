@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { MONO, CAT, CODE_CAT, TIMES } from '../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../shared/lib/currentUser.js'
 import { fetchMyMonthDuties } from '../shared/lib/roster.js'
+import { fetchMyWorkSessions, checkIn, checkOut, kstHM } from '../shared/lib/attendance.js'
 import { CAT_GROUPS } from '../features/duty-log/utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -33,7 +34,7 @@ function StDot({ st }) {
   )
 }
 
-// ── 출퇴근 카드 (A안 스탯 분리형) — 오늘 근무는 실데이터, 출퇴근 기록은 백엔드(work_session) 연동 예정 ──
+// ── 출퇴근 카드 (A안 스탯 분리형) — 오늘 근무·출퇴근 기록 모두 실데이터 (/work-sessions) ──
 function Stat({ label, value, color = '#1A1A22' }) {
   return (
     <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 86 }}>
@@ -44,11 +45,15 @@ function Stat({ label, value, color = '#1A1A22' }) {
 }
 const VLine = () => <span style={{ width: 1, height: 30, background: '#EEEEF1' }} />
 
-function PunchCard({ todayCode }) {
+function PunchCard({ todayCode, session, busy, onPunch }) {
   const now = new Date()
   const tt = todayCode ? TIMES[todayCode] : null
   const cc = CAT[CODE_CAT[todayCode] ?? 'off']
   const dateLabel = `${now.getMonth() + 1}월 ${now.getDate()}일 ${'일월화수목금토'[now.getDay()]}요일`
+
+  const inAt = kstHM(session?.checkedInAtUtc)
+  const outAt = kstHM(session?.checkedOutAtUtc)
+  const done = !!(inAt && outAt)
 
   return (
     <div style={{ ...CARD, padding: '18px 26px', display: 'flex', alignItems: 'center', gap: 22 }}>
@@ -63,20 +68,22 @@ function PunchCard({ todayCode }) {
         <VLine />
         <Stat label="근무 시간" value={tt ? `${pad(tt[0] % 24)}:00–${pad(tt[1] % 24)}:00` : todayCode ? '휴무' : '—'} />
         <VLine />
-        <Stat label="출근" value="--:--" color="#C4C4CC" />
+        <Stat label="출근" value={inAt || '--:--'} color={inAt ? '#5350E2' : '#C4C4CC'} />
         <VLine />
-        <Stat label="퇴근" value="--:--" color="#C4C4CC" />
+        <Stat label="퇴근" value={outAt || '--:--'} color={outAt ? '#5350E2' : '#C4C4CC'} />
         <button
           type="button"
-          disabled
-          title="출퇴근 기록은 백엔드 연동 후 제공됩니다"
+          disabled={done || busy}
           style={{
             height: 44, padding: '0 26px', border: 'none', borderRadius: 12, marginLeft: 6,
             fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700,
-            background: '#F1F1F4', color: '#B0B0BA', cursor: 'default',
+            ...(done
+              ? { background: '#E6F5EE', color: '#1F9D6B', cursor: 'default' }
+              : { background: '#5350E2', color: '#fff', cursor: 'pointer', opacity: busy ? 0.6 : 1 }),
           }}
+          onClick={onPunch}
         >
-          출근 체크
+          {done ? '근무 완료' : inAt ? '퇴근 체크' : '출근 체크'}
         </button>
       </div>
     </div>
@@ -217,6 +224,8 @@ function WorkCard() {
 }
 
 // 홈 — 요약 대시보드: 출퇴근 → [오늘 업무일지 | 이번 달 스케줄] → 작업지시
+const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
 function HomePage() {
   // 내 이번 달 근무 배정 — 실패 시 빈 캘린더 (닫히는 쪽으로 동작)
   const [duties, setDuties] = useState({})
@@ -229,6 +238,35 @@ function HomePage() {
     return () => { alive = false }
   }, [])
 
+  // 오늘의 내 출퇴근 세션 — 야간(어제 출근 후 미퇴근)도 잡히게 어제부터 조회
+  const [session, setSession] = useState(null)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let alive = true
+    const now = new Date()
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+    fetchMyWorkSessions(isoDate(yesterday), isoDate(now))
+      .then((list) => {
+        if (!alive) return
+        const open = list.find((s) => !s.checkedOutAtUtc)
+        setSession(open ?? list.find((s) => s.workDate === isoDate(now)) ?? null)
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  const punch = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      setSession(session && !session.checkedOutAtUtc ? await checkOut(session.id) : await checkIn())
+    } catch (e) {
+      alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <section
       style={{
@@ -237,7 +275,12 @@ function HomePage() {
         background: '#F7F7F9', display: 'flex', flexDirection: 'column', gap: 10,
       }}
     >
-      <PunchCard todayCode={duties[new Date().getDate()]?.code ?? null} />
+      <PunchCard
+        todayCode={duties[new Date().getDate()]?.code ?? null}
+        session={session}
+        busy={busy}
+        onPunch={punch}
+      />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <TodayLogCard />
         <MonthCard duties={duties} />

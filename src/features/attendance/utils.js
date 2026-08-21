@@ -32,6 +32,7 @@ export function buildDailyRows(roster, codeOf) {
     const cat = CODE_CAT[code]
     const off = cat === 'off' || cat === 'ws' || cat === 'lv'
     return {
+      employeeNo: p.employeeNo,
       team: p.team,
       teamColor: TEAM_COLORS[p.team] ?? '#8A8A98',
       name: p.name,
@@ -93,14 +94,21 @@ export function weekOfDate(month, d) {
   return Math.ceil((fdW + d) / 7)
 }
 
-// 주간/월간 집계 — 출퇴근 기록 백엔드(work_session)가 아직 없어 전부 0 이다.
-// API 가 생기면 서버 집계로 교체한다.
-const EMPTY_STATS = { workDays: 0, late: 0, abs: 0, un: 0, tot: 0, ot: 0 }
+// 주간/월간 집계 — 기간의 세션(/work-sessions)들을 사람별로 눕힌다.
+// late/abs/un 은 근무 배정과의 대조가 필요해 아직 0 이다 (후속: 배정 조인).
+export const EMPTY_STATS = { workDays: 0, late: 0, abs: 0, un: 0, tot: 0, ot: 0 }
 
-export function weekStats() {
-  return EMPTY_STATS
-}
-
-export function monthStats() {
-  return EMPTY_STATS
+// sessions: WorkSessionRS[], durationOf: (session) => 시간(소수) | null
+export function statsByEmployee(sessions, durationOf) {
+  const map = {}
+  ;(sessions ?? []).forEach((s) => {
+    const st = (map[s.employeeNo] ??= { workDays: 0, late: 0, abs: 0, un: 0, tot: 0, ot: 0 })
+    st.workDays += 1
+    const h = durationOf(s)
+    if (h != null) {
+      st.tot += h
+      st.ot += Math.max(0, h - 9)
+    }
+  })
+  return map
 }

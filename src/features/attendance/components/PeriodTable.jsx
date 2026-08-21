@@ -1,5 +1,5 @@
 import { MONO } from '../../../shared/lib/workCodes.js'
-import { groupByTeam, weekStats, monthStats } from '../utils.js'
+import { groupByTeam, EMPTY_STATS } from '../utils.js'
 
 // 지각/결근 배지 (0이면 회색 대시)
 const CountChip = ({ n, color, bg }) =>
@@ -17,8 +17,8 @@ const UnChip = ({ n }) =>
   )
 
 // 주간/월간 집계 표. 주간(mode='week')은 주 52시간 진행 바가 추가된다.
-// rows: buildDailyRows 결과 (실데이터 인원)
-function PeriodTable({ rows = [], mode, month, week }) {
+// rows: buildDailyRows 결과 (실데이터 인원), statsOf: 사번 → 기간 집계 (세션 기반)
+function PeriodTable({ rows = [], mode, statsOf }) {
   const teams = groupByTeam(rows)
   const heads =
     mode === 'week'
@@ -41,7 +41,7 @@ function PeriodTable({ rows = [], mode, month, week }) {
               <span className="att-cnt">{tm.count}명</span>
             </div>
             {tm.members.map((m) => {
-              const st = mode === 'week' ? weekStats(m.name, month, week) : monthStats(m.name, month)
+              const st = statsOf?.(m.employeeNo) ?? EMPTY_STATS
               const over = mode === 'week' && st.tot > 52
               const diff = Math.abs(st.tot - 52)
               const pct = Math.min(100, Math.round((st.tot / 52) * 100))

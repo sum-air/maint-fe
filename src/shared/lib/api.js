@@ -68,4 +68,8 @@ async function send(path, { method = 'GET', params, body } = {}) {
 
 export const apiGet = (path, params) => send(path, { params })
 
+export const apiPost = (path, body) => send(path, { method: 'POST', body })
+
 export const apiPut = (path, body) => send(path, { method: 'PUT', body })
+
+export const apiPatch = (path, body) => send(path, { method: 'PATCH', body })

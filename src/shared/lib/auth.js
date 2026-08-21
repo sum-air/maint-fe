@@ -40,6 +40,11 @@ export function getTokenClaims() {
 // 화면 진입 허용 여부 — 로그인 세션 또는 dev 환경변수 토큰
 export const hasSession = () => !!getToken()
 
+// 실제 로그인으로 만든 세션이 있는지 — /login 재진입 판단용.
+// dev 환경변수 토큰은 여기서 빼서, dev 에서도 /login 을 열어 실로그인을 시험할 수 있게 한다
+// (로그인하면 localStorage 세션이 환경변수보다 우선한다).
+export const hasStoredSession = () => !!localStorage.getItem(TOKEN_KEY)
+
 // 브라우저(설치) 식별자 — 재로그인 시 같은 기기임을 알아보는 단서. 최초 접속 때 만들어 보관한다.
 function getDeviceKey() {
   let key = localStorage.getItem(DEVICE_KEY)

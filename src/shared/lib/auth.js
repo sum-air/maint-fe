@@ -12,11 +12,11 @@ export const TOKEN_KEY = 'atlas.accessToken'
 const REFRESH_KEY = 'atlas.refreshToken'
 const DEVICE_KEY = 'atlas.deviceKey'
 
-// 정비 시스템 전용 Google 웹 클라이언트 (GCP sumair-maint 프로젝트).
-// 허용 오리진: localhost:5173, sumair-maint.vercel.app — atlas 허용 audience 등록은 V16 시드.
+// admin(sumair-new-admin)과 같은 Google 웹 클라이언트를 쓴다 — 그쪽 .env 의 GOOGLE_CLIENT_ID 와 같은 값.
+// 오리진이 localhost:3000 으로 고정되는 이유는 vite.config.js 의 server 설정에 적어뒀다.
 export const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ??
-  '801922469497-e272lsdhe983nab8d0gkvqcj610elgoh.apps.googleusercontent.com'
+  '829726031399-r2hih4a8ukj4go1qnfdj9bqp0054l408.apps.googleusercontent.com'
 
 export function getToken() {
   const raw = localStorage.getItem(TOKEN_KEY) ?? import.meta.env.VITE_ATLAS_TOKEN ?? ''

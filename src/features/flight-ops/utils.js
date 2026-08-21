@@ -84,10 +84,14 @@ export function mapFlights(rows) {
       ? Math.min(98, Math.max(2, Math.round(((Date.now() - depMs) / (arrMs - depMs)) * 100)))
       : undefined
 
-    // SI 스트립 — 전문 SI(영문)를 우선 잇고, 없으면 사람이 쓴 한글 사유(지연→비정상 순)
-    const siTexts = (f.supplementaryInfo ?? []).map((s) => s.content).filter(Boolean)
-    const si = siTexts.join(' · ')
-      || f.reasons?.departureDelay || f.reasons?.arrivalDelay || f.reasons?.irregularity || ''
+    // SI 스트립 — 전문 SI · 전문 리마크 · 사람이 쓴 사유 · 지연코드 설명(+분)을 한 줄로 (있는 것만)
+    const si = [
+      ...(f.supplementaryInfo ?? []).map((s) => s.content),
+      ...(f.remarks ?? []).map((r) => r.content),
+      ...Object.values(f.reasons ?? {}).filter(Boolean),
+      ...(f.delayCodes ?? []).map((c) =>
+        c.description && `${c.description}${c.minutes ? ` (+${c.minutes}분)` : ''}`),
+    ].filter(Boolean).join(' · ')
 
     const leg = {
       fno: f.flightNumber,
@@ -99,7 +103,8 @@ export function mapFlights(rows) {
       eta: cur ? kstHM(f.estimatedArrivalUtc ?? new Date(arrMs).toISOString()) : '',
       st,
       pct,
-      dl: f.irregularityCode ?? '',
+      // DLA 배지 코드 — 코딩된 지연 코드가 있으면 그걸, 없으면 비정상 코드
+      dl: f.delayCodes?.[0]?.code ?? f.irregularityCode ?? '',
       // 탑승 인원 — 출발 전엔 onBoard 가 null 이라 예약(성인+소아)으로 대신 보여준다
       pax: f.passengers?.onBoard ?? f.passengers?.reserved ?? null,
       // 램프 연료 — 실적이 있으면 실적, 아니면 계획

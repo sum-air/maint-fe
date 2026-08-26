@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
-import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { fetchMonthDutyMap } from '../../../shared/lib/roster.js'
+import { fetchMonthWorkLogs } from '../../../shared/lib/worklog.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 import { todayKey, fmtDate } from '../utils.js'
 
@@ -9,8 +9,8 @@ const pad = (n) => String(n).padStart(2, '0')
 
 // 업무일지 엑셀 추출 모달 (admin 전용) — 월/일 단위 + 팀·인원 중복 선택.
 // 미선택 = 전체. 파일은 엑셀에서 바로 열리는 CSV(BOM 포함)로 내려받는다.
-// roster 는 실데이터 정비 인원 목록, 근무코드는 /duty-assignments 에서 읽는다.
-function ExportModal({ logsByDate, roster, onClose }) {
+// roster 는 실데이터 정비 인원 목록, 근무코드는 /duty-assignments, 일지는 /work-logs 에서 읽는다.
+function ExportModal({ roster, onClose }) {
   const [unit, setUnit] = useState('month') // 'month' | 'day'
   // 월 범위 — mTo 가 null 이면 단일 월. 시작 월 → 끝 월 두 번 클릭으로 범위 지정
   const [mFrom, setMFrom] = useState(() => new Date().getMonth() + 1)
@@ -46,10 +46,6 @@ function ExportModal({ logsByDate, roster, onClose }) {
     }
   }
 
-  // 내 일지는 화면 상태, 다른 사람 일지는 백엔드(work_log)가 아직 없어 빈 목록 —
-  // API 가 생기면 서버 추출 다운로드로 교체한다.
-  const logsOf = (name, key) => (name === CURRENT_USER.name ? (logsByDate[key] ?? []) : [])
-
   const year = new Date().getFullYear()
   const exportCsv = async () => {
     const months = Array.from({ length: (mTo ?? mFrom) - mFrom + 1 }, (_, i) => mFrom + i)
@@ -59,20 +55,27 @@ function ExportModal({ logsByDate, roster, onClose }) {
       : [day]
     const targets = selNames.length > 0 ? people.filter((p) => selNames.includes(p.name)) : people
 
-    // 근무코드 실데이터 — 기간에 걸친 달들을 한 번씩 읽는다. 실패한 달은 빈 코드로 남긴다.
+    // 근무코드·일지 실데이터 — 기간에 걸친 달들을 한 번씩 읽는다. 실패한 달은 빈 값으로 남긴다.
     const dutyByMonth = {}
+    const logsByMonth = {}
     const monthList = unit === 'month' ? months : [Number(day.split('.')[0])]
-    await Promise.all(monthList.map((m) =>
+    await Promise.all(monthList.flatMap((m) => [
       fetchMonthDutyMap(year, m - 1)
         .then((map) => { dutyByMonth[m] = map })
-        .catch(() => { dutyByMonth[m] = {} })))
+        .catch(() => { dutyByMonth[m] = {} }),
+      fetchMonthWorkLogs(year, m - 1)
+        .then((list) => { logsByMonth[m] = list })
+        .catch(() => { logsByMonth[m] = [] }),
+    ]))
+    const logsOf = (employeeNo, k) =>
+      (logsByMonth[Number(k.split('.')[0])] ?? []).filter((l) => l.employeeNo === employeeNo && l.key === k)
 
     const rows = [['날짜', '팀', '이름', '직급', '근무코드', '시작', '종료', '카테고리', '내용']]
     for (const p of targets) {
       for (const k of days) {
         const [m, d] = k.split('.').map(Number)
         const code = dutyByMonth[m]?.[`${p.employeeNo}_${d}`]?.code ?? ''
-        for (const l of logsOf(p.name, k)) rows.push([k, p.team, p.name, p.role ?? '', code, l.s, l.e || '', l.c, l.t])
+        for (const l of logsOf(p.employeeNo, k)) rows.push([k, p.team, p.name, p.role ?? '', code, l.s, l.e || '', l.c, l.t])
       }
     }
 

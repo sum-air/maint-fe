@@ -36,10 +36,6 @@ export const fmtDate = (key) => {
   return `${m}월 ${d}일(${w})`
 }
 
-// 일지 데이터 — { "MM.DD": [{ s, e, gi, c, t }] }, gi: CAT_GROUPS 인덱스, e 빈 값 = 진행 중.
-// 백엔드(work_log)가 아직 없어 화면 상태로만 산다 (새로고침 시 소실). API 가 생기면 조회/저장으로 교체.
-export const INITIAL_LOGS = {}
-
 // 실제 보유 기체 등록부호 — /flights 응답과 같은 실기체다
 export const AIRCRAFT_REGS = ['HL5264', 'HL5263']
 
@@ -56,9 +52,3 @@ export const NW_ST = {
 // NRC·W/O 목록 — 백엔드(work_order)가 아직 없어 화면 상태로만 산다.
 // reg: 등록일, close: 종결일 (CLOSE 전환 시 자동 기록), who: 작업자 표시("대표자 등 N명")
 export const INITIAL_NRC_WO = []
-
-// To-do — 미완료는 체크될 때까지 매일 이월되고, 완료(doneAt)된 항목은 완료한 그날만 보인다.
-// 백엔드가 아직 없어 화면 상태로만 산다.
-export const INITIAL_TODOS = []
-
-export const INITIAL_MEMO = ''

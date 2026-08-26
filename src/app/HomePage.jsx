@@ -4,6 +4,7 @@ import { MONO, CAT, CODE_CAT, TIMES } from '../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../shared/lib/currentUser.js'
 import { fetchMyMonthDuties } from '../shared/lib/roster.js'
 import { fetchMyWorkSessions, checkIn, checkOut, kstHM } from '../shared/lib/attendance.js'
+import { fetchWorkLogs } from '../shared/lib/worklog.js'
 import { CAT_GROUPS } from '../features/duty-log/utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -90,9 +91,23 @@ function PunchCard({ todayCode, session, busy, onPunch }) {
   )
 }
 
-// ── 오늘 업무일지 요약 — 일지 백엔드(work_log) 연동 예정이라 빈 상태로 시작 ──
+// ── 오늘 업무일지 요약 — 내가 오늘 쓴 일지 (/work-logs 실데이터) ──
 function TodayLogCard() {
-  const logs = []
+  const [logs, setLogs] = useState([])
+  useEffect(() => {
+    let alive = true
+    const now = new Date()
+    const iso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    fetchWorkLogs(iso, iso)
+      .then((list) => {
+        if (!alive) return
+        setLogs(list
+          .filter((l) => l.employeeNo === CURRENT_USER.employeeNo)
+          .sort((a, b) => a.s.localeCompare(b.s)))
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
   const last = logs[logs.length - 1]
   const span = logs.length > 0 ? `${logs[0].s} ~ ${last.e || last.s}` : ''
 

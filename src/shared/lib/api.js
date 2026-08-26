@@ -63,6 +63,7 @@ async function send(path, { method = 'GET', params, body } = {}) {
     const errBody = await res.json().catch(() => ({}))
     throw new ApiError(res.status, errBody.code ?? 'UNKNOWN', errBody.message ?? `요청 실패 (${res.status})`)
   }
+  if (res.status === 204) return null // 삭제 성공 — 본문 없음
   return res.json()
 }
 
@@ -73,3 +74,5 @@ export const apiPost = (path, body) => send(path, { method: 'POST', body })
 export const apiPut = (path, body) => send(path, { method: 'PUT', body })
 
 export const apiPatch = (path, body) => send(path, { method: 'PATCH', body })
+
+export const apiDelete = (path) => send(path, { method: 'DELETE' })

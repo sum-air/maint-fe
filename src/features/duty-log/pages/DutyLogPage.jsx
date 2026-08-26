@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MONO, CAT, CODE_CAT, TIMES } from '../../../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
@@ -8,7 +8,10 @@ import CategoryModal from '../components/CategoryModal.jsx'
 import TimeModal from '../components/TimeModal.jsx'
 import NrcWoCard from '../components/NrcWoCard.jsx'
 import ExportModal from '../components/ExportModal.jsx'
-import { CAT_GROUPS, INITIAL_LOGS, INITIAL_TODOS, INITIAL_MEMO, todayKey, nowHM, fmtDate } from '../utils.js'
+import {
+  addTodo, createWorkLog, deleteTodo, fetchMemo, fetchMonthWorkLogs, fetchTodos, saveMemo, toggleTodo,
+} from '../../../shared/lib/worklog.js'
+import { CAT_GROUPS, todayKey, nowHM, fmtDate } from '../utils.js'
 import './duty-log.css'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -23,23 +26,50 @@ const durTxt = (s, e) => {
   return h > 0 ? (min % 60 ? `${h}시간 ${min % 60}분` : `${h}시간`) : `${min}분`
 }
 
-// To-do · 메모 — 개인용, 백엔드 연동 전 화면 상태만 (좌측 카드 상단부)
+// To-do · 메모 — 개인용, 서버 저장 (본인 전용 — 팀장·관리자도 남의 것은 못 본다)
 function TodoMemo() {
-  const [todos, setTodos] = useState(INITIAL_TODOS)
+  const [todos, setTodos] = useState([])
   const [draft, setDraft] = useState('')
-  const [memo, setMemo] = useState(INITIAL_MEMO)
+  const [memo, setMemo] = useState('')
+  const memoDirty = useRef(false)
 
-  // 이월 규칙 — 미완료는 체크될 때까지 계속 보이고, 완료 건은 완료한 그날만 보인다.
-  // (백엔드 연동 시 서버에 doneAt 저장 — 지금은 화면 상태라 새로고침 전까지만 유지)
+  useEffect(() => {
+    let alive = true
+    fetchTodos().then((l) => { if (alive) setTodos(l) }).catch(() => {})
+    fetchMemo().then((c) => { if (alive) setMemo(c) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+
+  // 메모 자동 저장 — 입력이 멈춘 뒤 800ms (통째 교체 upsert 라 순서 걱정 없음)
+  useEffect(() => {
+    if (!memoDirty.current) return
+    const timer = setTimeout(() => {
+      memoDirty.current = false
+      saveMemo(memo).catch(() => {})
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [memo])
+
+  // 이월 규칙 — 미완료는 체크될 때까지 계속 보이고, 완료 건은 완료한 그날만 보인다 (서버 doneOn 기준)
   const visible = todos.filter((t) => !t.done || t.doneAt === todayKey())
   const doneN = visible.filter((t) => t.done).length
-  const toggle = (id) =>
-    setTodos((s) => s.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? '' : todayKey() } : t)))
-  const remove = (id) => setTodos((s) => s.filter((t) => t.id !== id))
+  const toggle = (id) => {
+    const cur = todos.find((t) => t.id === id)
+    if (!cur) return
+    toggleTodo(id, !cur.done)
+      .then((next) => setTodos((s) => s.map((t) => (t.id === id ? next : t))))
+      .catch((e) => alert(e.message))
+  }
+  const remove = (id) =>
+    deleteTodo(id)
+      .then(() => setTodos((s) => s.filter((t) => t.id !== id)))
+      .catch((e) => alert(e.message))
   const add = () => {
     const text = draft.trim()
     if (!text) return
-    setTodos((s) => [...s, { id: Date.now(), text, done: false, doneAt: '' }])
+    addTodo(text)
+      .then((t) => setTodos((s) => [...s, t]))
+      .catch((e) => alert(e.message))
     setDraft('')
   }
 
@@ -74,7 +104,12 @@ function TodoMemo() {
       </div>
 
       <div className="dl-ctitle" style={{ margin: '15px 0 9px' }}>메모</div>
-      <textarea className="dl-memo" value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="메모를 적어두세요" />
+      <textarea
+        className="dl-memo"
+        value={memo}
+        onChange={(e) => { memoDirty.current = true; setMemo(e.target.value) }}
+        placeholder="메모를 적어두세요"
+      />
     </>
   )
 }
@@ -191,11 +226,10 @@ function DayList({ logsByDate, date, onPick, dutyCode }) {
   )
 }
 
-// 업무일지 — 3열: To-do·메모 │ 오늘 일지(타임라인+입력) │ 일별 리스트 (백엔드 연동 전 데모)
+// 업무일지 — 3열: To-do·메모 │ 오늘 일지(타임라인+입력) │ 일별 리스트
 function DutyLogPage() {
   const [date, setDate] = useState(todayKey()) // "MM.DD"
   const [calOpen, setCalOpen] = useState(false)
-  const [logsByDate, setLogsByDate] = useState(INITIAL_LOGS)
 
   // 실데이터 — 정비 로스터(팀·인원 필터), 내 관리 팀(권한), 보고 있는 달의 근무 배정
   const [roster, setRoster] = useState([])
@@ -222,6 +256,17 @@ function DutyLogPage() {
   const dutyCodeOf = (employeeNo, m, d) =>
     m === dutyMap.month ? dutyMap.map[`${employeeNo}_${d}`]?.code : undefined
 
+  // 일지 실데이터 — 보고 있는 달의 열람 범위 내 전원 일지 (범위는 서버가 거른다:
+  // 본인 / 지정 팀 / 관리자 전체). 저장 후엔 응답을 목록에 합쳐 재조회 없이 반영.
+  const [monthLogs, setMonthLogs] = useState({ month: 0, list: [] })
+  useEffect(() => {
+    let alive = true
+    fetchMonthWorkLogs(new Date().getFullYear(), dateMonth - 1)
+      .then((list) => { if (alive) setMonthLogs({ month: dateMonth, list }) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [dateMonth])
+
   // 입력 상태 — 시간은 현재 시각 디폴트, 시작/종료 클릭 시 시간 모달
   const [start, setStart] = useState(() => nowHM())
   const [end, setEnd] = useState(() => nowHM())
@@ -231,7 +276,7 @@ function DutyLogPage() {
   const [timeTarget, setTimeTarget] = useState(null) // 'start' | 'end' | null
 
   // 일지 주인 선택 — 관리자(TENANT_ADMIN)는 전체 인원, 근무표 관리자로 지정된 사람은 지정 팀만.
-  // 다른 사람 일지는 보기 전용 — 일지 백엔드(work_log)가 아직 없어 빈 목록이 나온다.
+  // 다른 사람 일지는 보기 전용 — 서버가 열람 범위 안의 일지만 내려준다.
   const canPickTeam = CURRENT_USER.isAdmin
   const canPickPerson = CURRENT_USER.isAdmin || managedTeams.length > 0
   const [viewTeam, setViewTeam] = useState(null)
@@ -252,7 +297,23 @@ function DutyLogPage() {
   }
 
   const isToday = date === todayKey()
-  const logs = viewing ? [] : (logsByDate[date] ?? [])
+
+  // 그날 일지 주인 — 남의 일지를 보는 중이면 그 사람, 아니면 나
+  const ownerNo = viewing
+    ? roster.find((p) => p.name === viewName)?.employeeNo
+    : CURRENT_USER.employeeNo
+
+  // 일지 주인의 "MM.DD" → [엔트리] (시작 시각순) — 타임라인·일별 리스트가 같은 원천을 쓴다
+  const logsByDate = useMemo(() => {
+    const map = {}
+    for (const l of monthLogs.list) {
+      if (l.employeeNo !== ownerNo) continue
+      ;(map[l.key] ??= []).push(l)
+    }
+    Object.values(map).forEach((a) => a.sort((x, y) => x.s.localeCompare(y.s)))
+    return map
+  }, [monthLogs, ownerNo])
+  const logs = logsByDate[date] ?? []
 
   const stepDay = (delta) => {
     const [m, d] = date.split('.').map(Number)
@@ -262,9 +323,6 @@ function DutyLogPage() {
 
   // 그날 일지 주인의 근무코드 출근·퇴근 시각 (실데이터 — 배정 없거나 시간 없는 코드는 09:00~18:00)
   const [selM, selD] = date.split('.').map(Number)
-  const ownerNo = viewing
-    ? roster.find((p) => p.name === viewName)?.employeeNo
-    : CURRENT_USER.employeeNo
   const shiftTT = TIMES[dutyCodeOf(ownerNo, selM, selD)]
   const shiftStart = shiftTT ? `${pad(shiftTT[0] % 24)}:00` : '09:00'
   const shiftEnd = shiftTT ? `${pad(shiftTT[1] % 24)}:00` : '18:00'
@@ -274,11 +332,9 @@ function DutyLogPage() {
 
   const add = () => {
     if (!canAdd) return
-    const entry = { s: start, e: end === start ? '' : end, gi: cat.gi, c: cat.c, t: content.trim() }
-    setLogsByDate((m) => ({
-      ...m,
-      [date]: [...(m[date] ?? []), entry].sort((a, b) => a.s.localeCompare(b.s)),
-    }))
+    createWorkLog({ key: date, start, end: end === start ? '' : end, gi: cat.gi, c: cat.c, t: content.trim() })
+      .then((entry) => setMonthLogs((m) => ({ ...m, list: [...m.list, entry] })))
+      .catch((e) => alert(`일지 저장 실패 — ${e.message}`))
     setCat(null)
     setContent('')
     setStart(nowHM())
@@ -465,12 +521,12 @@ function DutyLogPage() {
           logsByDate={logsByDate}
           date={date}
           onPick={setDate}
-          dutyCode={(m, d) => dutyCodeOf(CURRENT_USER.employeeNo, m, d)}
+          dutyCode={(m, d) => dutyCodeOf(ownerNo, m, d)}
         />
         <NrcWoCard roster={roster} />
       </div>
 
-      {xlOpen && <ExportModal logsByDate={logsByDate} roster={roster} onClose={() => setXlOpen(false)} />}
+      {xlOpen && <ExportModal roster={roster} onClose={() => setXlOpen(false)} />}
       {catOpen && <CategoryModal selected={cat} onPick={setCat} onClose={() => setCatOpen(false)} />}
       {timeTarget && (
         <TimeModal

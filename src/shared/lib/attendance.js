@@ -11,6 +11,11 @@ export const checkIn = () => apiPost('/work-sessions')
 // 퇴근 — 열려 있는 본인 세션을 닫는다 (야간은 출근일 세션이 닫힌다)
 export const checkOut = (sessionId) => apiPatch(`/work-sessions/${sessionId}`, { checkedOut: true })
 
+// 지금 이 요청이 어느 사내 네트워크에서 왔는지 — 출퇴근 게이트와 같은 판정.
+// 응답: { allowed, name: '[SUMAIR]Office' | null, location: '정비 사무실' | null }
+// 허용 대역이 하나도 없으면 allowed=true, name=null (제한 없음).
+export const fetchNetworkStatus = () => apiGet('/attendance-networks/me')
+
 const pad = (n) => String(n).padStart(2, '0')
 
 // UTC ISO → KST "HH:MM"

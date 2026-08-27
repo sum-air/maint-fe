@@ -81,3 +81,49 @@ export async function fetchMemo() {
 }
 
 export const saveMemo = (content) => apiPut('/personal-memos/me', { content })
+
+// ── NRC · W/O — /work-orders. 팀 공유 자료라 열람·등록·수정·삭제 모두 인증만 필요 ──
+// 서버: type NRC|WO, aircraftReg, number, content, status OPEN|CLOSE, registeredOn/closedOn ISO,
+//       workers [{employeeId, employeeNo}]
+// 화면: { id, type 'NRC'|'W/O', ac, no, t, st, reg 'MM.DD', close 'MM.DD'|'', workerIds }
+// 작업자 이름은 화면이 직원 목록(roster)으로 해석한다.
+
+// "MM.DD" → 올해 "YYYY-MM-DD"
+const fromKey = (key) => `${new Date().getFullYear()}-${key.replace('.', '-')}`
+
+const toOrder = (r) => ({
+  id: r.id,
+  type: r.type === 'WO' ? 'W/O' : r.type,
+  ac: r.aircraftReg,
+  no: r.number,
+  t: r.content ?? '',
+  st: r.status,
+  reg: toKey(r.registeredOn),
+  close: r.closedOn ? toKey(r.closedOn) : '',
+  workerIds: r.workers.map((w) => w.employeeId),
+})
+
+const toOrderRQ = (v) => ({
+  type: v.type === 'W/O' ? 'WO' : v.type,
+  aircraftReg: v.ac,
+  number: v.no,
+  content: v.t,
+  status: v.st,
+  registeredOn: fromKey(v.reg),
+  closedOn: v.st === 'CLOSE' && v.close ? fromKey(v.close) : null,
+  workerEmployeeIds: v.workerIds,
+})
+
+export async function fetchWorkOrders() {
+  return (await apiGet('/work-orders')).map(toOrder)
+}
+
+export async function createWorkOrder(v) {
+  return toOrder(await apiPost('/work-orders', toOrderRQ(v)))
+}
+
+export async function updateWorkOrder(id, v) {
+  return toOrder(await apiPut(`/work-orders/${id}`, toOrderRQ(v)))
+}
+
+export const deleteWorkOrder = (id) => apiDelete(`/work-orders/${id}`)

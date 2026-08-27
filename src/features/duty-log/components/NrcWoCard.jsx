@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
+import { createWorkOrder, deleteWorkOrder, fetchWorkOrders, updateWorkOrder } from '../../../shared/lib/worklog.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
-import { AIRCRAFT_REGS, NW_TYPE, NW_ST, INITIAL_NRC_WO, todayKey, fmtDate } from '../utils.js'
+import { AIRCRAFT_REGS, NW_TYPE, NW_ST, todayKey, fmtDate } from '../utils.js'
 
 const PAGE_SIZE = 5
 
@@ -27,15 +28,15 @@ function NrcWoModal({ mode, item, workerPool, onSave, onDelete, onClose }) {
     setClose(s === 'CLOSE' ? (close || todayKey()) : '')
   }
 
-  // 작업자 — 복수 선택. whoL(배열)로 편집하고, who 는 "대표자 등 N명" 표시용
-  const [whoL, setWhoL] = useState(item?.whoL ?? [])
-  const toggleWho = (n) => setWhoL((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
+  // 작업자 — 복수 선택. 직원 PK 로 편집하고 이름은 workerPool 로 해석한다
+  const [workerIds, setWorkerIds] = useState(item?.workerIds ?? [])
+  const toggleWho = (id) => setWorkerIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+  const nameOf = (id) => workerPool.find((p) => p.id === id)?.name ?? '?'
 
   const canSave = no.trim().length > 0
   const save = () => {
     if (!canSave) return
-    const who = whoL.length === 0 ? '' : whoL.length === 1 ? whoL[0] : `${whoL[0]} 등 ${whoL.length}명`
-    onSave({ type, ac, no: no.trim(), t: text.trim(), st, reg, close: st === 'CLOSE' ? close : '', whoL, who })
+    onSave({ type, ac, no: no.trim(), t: text.trim(), st, reg, close: st === 'CLOSE' ? close : '', workerIds })
     onClose()
   }
 
@@ -112,11 +113,11 @@ function NrcWoModal({ mode, item, workerPool, onSave, onDelete, onClose }) {
             className="dl-filter"
             style={{
               width: '100%', height: 36, justifyContent: 'center', fontWeight: 800,
-              ...(whoL.length > 0 ? { background: '#E9E8F7', color: '#433FBB', borderColor: 'transparent' } : { color: '#B4B7C0' }),
+              ...(workerIds.length > 0 ? { background: '#E9E8F7', color: '#433FBB', borderColor: 'transparent' } : { color: '#B4B7C0' }),
             }}
             onClick={() => setOpenSel((v) => (v === 'who' ? null : 'who'))}
           >
-            {whoL.length === 0 ? '작업자 선택' : whoL.length === 1 ? whoL[0] : `${whoL[0]} 외 ${whoL.length - 1}명`}
+            {workerIds.length === 0 ? '작업자 선택' : workerIds.length === 1 ? nameOf(workerIds[0]) : `${nameOf(workerIds[0])} 외 ${workerIds.length - 1}명`}
             <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></svg>
           </button>
           {openSel === 'who' && (
@@ -125,10 +126,10 @@ function NrcWoModal({ mode, item, workerPool, onSave, onDelete, onClose }) {
               <div className="dl-fmenu" style={{ maxHeight: 216, overflowY: 'auto' }}>
                 {workerPool.map((p) => (
                   <button
-                    key={p.employeeNo}
+                    key={p.id}
                     type="button"
-                    className={whoL.includes(p.name) ? 'dl-fitem on' : 'dl-fitem'}
-                    onClick={() => toggleWho(p.name)}
+                    className={workerIds.includes(p.id) ? 'dl-fitem on' : 'dl-fitem'}
+                    onClick={() => toggleWho(p.id)}
                   >
                     {p.name}{p.role ? ` · ${p.role}` : ''}
                   </button>
@@ -233,9 +234,15 @@ function NrcWoModal({ mode, item, workerPool, onSave, onDelete, onClose }) {
 }
 
 // NRC · W/O 카드 — 필터 3종 + 등록 모달 + 행 클릭 수정 + 날짜(등록/종결) 2줄 + 페이지네이션
+// 목록은 /work-orders 실데이터 (팀 공유 — 누구나 등록·수정·삭제)
 function NrcWoCard({ roster }) {
   const workerPool = workerPoolOf(roster)
-  const [items, setItems] = useState(INITIAL_NRC_WO)
+  const [items, setItems] = useState([])
+  useEffect(() => {
+    let alive = true
+    fetchWorkOrders().then((l) => { if (alive) setItems(l) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
   const [fltType, setFltType] = useState(null)
   const [fltSt, setFltSt] = useState(null)
   const [fltAc, setFltAc] = useState(null)
@@ -257,11 +264,19 @@ function NrcWoCard({ roster }) {
     { key: 'ac', label: '기체', value: fltAc, set: setFltAc, opts: AIRCRAFT_REGS },
   ]
 
-  // 날짜(등록/종결)는 모달에서 확정되어 넘어온다
-  const saveNew = (v) => setItems((s) => [{ ...v, st: 'OPEN', close: '' }, ...s])
+  // 날짜(등록/종결)는 모달에서 확정되어 넘어온다. 저장 응답을 목록에 합쳐 재조회 없이 반영.
+  const saveNew = (v) =>
+    createWorkOrder({ ...v, st: 'OPEN', close: '' })
+      .then((saved) => setItems((s) => [saved, ...s]))
+      .catch((e) => alert(`등록 실패 — ${e.message}`))
   const saveEdit = (orig) => (v) =>
-    setItems((s) => s.map((x) => (x === orig ? { ...x, ...v } : x)))
-  const remove = (item) => setItems((s) => s.filter((x) => x !== item))
+    updateWorkOrder(orig.id, v)
+      .then((saved) => setItems((s) => s.map((x) => (x.id === orig.id ? saved : x))))
+      .catch((e) => alert(`저장 실패 — ${e.message}`))
+  const remove = (item) =>
+    deleteWorkOrder(item.id)
+      .then(() => setItems((s) => s.filter((x) => x.id !== item.id)))
+      .catch((e) => alert(`삭제 실패 — ${e.message}`))
 
   return (
     <div className="dl-card">
@@ -304,7 +319,7 @@ function NrcWoCard({ roster }) {
       {/* 리스트 — 행 클릭 시 수정 모달 */}
       <div style={{ flex: 1 }}>
         {pageItems.map((x) => (
-          <button key={`${x.type}_${x.no}`} type="button" className="dl-nwrow" onClick={() => setModal({ mode: 'edit', item: x })}>
+          <button key={x.id} type="button" className="dl-nwrow" onClick={() => setModal({ mode: 'edit', item: x })}>
             <span className="dl-typebadge" style={{ background: NW_TYPE[x.type].bg, color: NW_TYPE[x.type].tx }}>
               {x.type}
             </span>

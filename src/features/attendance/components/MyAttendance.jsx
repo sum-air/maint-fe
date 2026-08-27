@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell, Legend } from 'recharts'
 import { CAT, CODE_CAT, TIMES, MONO } from '../../../shared/lib/workCodes.js'
 import { fetchMyMonthDuties } from '../../../shared/lib/roster.js'
-import { fetchMyWorkSessions, checkIn, checkOut, kstHM, durationHours } from '../../../shared/lib/attendance.js'
+import { fetchMyWorkSessions, fetchNetworkStatus, checkIn, checkOut, kstHM, durationHours } from '../../../shared/lib/attendance.js'
 import { weekMeta } from '../utils.js'
 
 // 내 출퇴근 (근무자 화면) — 오늘 근무 카드 + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
@@ -151,10 +151,22 @@ const fmtHMs = (ms) => {
   return `${pad(Math.floor(sec / 3600))}:${pad(Math.floor((sec % 3600) / 60))}`
 }
 
-// 오늘 근무 카드 — 보라 그라데이션 히어로 (링 게이지 + 날짜 + 출근/경과/남은 + 버튼)
+// 와이파이 아이콘 — off 면 사선
+const WifiIcon = ({ off }) => (
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 8.8a15 15 0 0 1 20 0" /><path d="M5 12.5a10 10 0 0 1 14 0" /><path d="M8.5 16a5 5 0 0 1 7 0" />
+    <circle cx="12" cy="19.5" r=".9" fill="currentColor" />
+    {off && <path d="M3 3l18 18" />}
+  </svg>
+)
+
+// 오늘 근무 카드 — 보라 그라데이션 히어로 (링 게이지 + 날짜 + 출근/경과/남은 + 네트워크 + 버튼)
 // session: 오늘/열린 내 세션, todayCode: 오늘 근무코드 (계획 퇴근시각·진행률 계산용)
-function TodayCard({ session, todayCode, busy, onPunch }) {
+// network: 서버가 판정한 현재 네트워크 { allowed, name, location } — 아직 모르면 null
+function TodayCard({ session, todayCode, network, busy, onPunch }) {
   const now = useClock()
+  // 사내망 아님이 확인된 경우만 버튼을 잠근다 (판정 전·제한 없음은 그대로) — 최종 판정은 서버 403
+  const blocked = network != null && !network.allowed
 
   const inMs = session ? Date.parse(session.checkedInAtUtc) : null
   const outMs = session?.checkedOutAtUtc ? Date.parse(session.checkedOutAtUtc) : null
@@ -219,16 +231,41 @@ function TodayCard({ session, todayCode, busy, onPunch }) {
         </div>
       </div>
 
-      {/* 출근/퇴근 버튼 — 상태에 맞는 쪽만 활성화 */}
+      {/* 현재 네트워크 — 어느 와이파이에서 찍는지 (허용 대역이 등록된 경우에만 표시) */}
+      {network != null && (network.name != null || blocked) && (
+        <>
+          <span style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.22)' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: blocked ? 'rgba(255,255,255,.75)' : '#fff' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 14, background: blocked ? 'rgba(21,21,29,.18)' : 'rgba(255,255,255,.16)', flex: 'none' }}>
+              <WifiIcon off={blocked} />
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-.3px' }}>
+                {blocked ? '사내 네트워크 아님' : network.name}
+              </span>
+              {blocked ? (
+                <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.7 }}>회사 와이파이에 연결하세요</span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
+                  <i style={{ width: 6, height: 6, borderRadius: '50%', background: '#5EE0A0' }} />
+                  {network.location ? `${network.location} · 연결됨` : '연결됨'}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 출근/퇴근 버튼 — 상태에 맞는 쪽만 활성화, 사내망 아니면 둘 다 잠김 */}
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 9 }}>
         <button
           type="button"
-          disabled={busy || session != null}
+          disabled={busy || blocked || session != null}
           onClick={onPunch}
           style={{
             height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12,
             fontFamily: 'inherit', fontWeight: 800,
-            ...(session == null
+            ...(session == null && !blocked
               ? { background: '#fff', color: '#433FBB', cursor: 'pointer', opacity: busy ? 0.6 : 1 }
               : { background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', cursor: 'default' }),
           }}
@@ -237,12 +274,12 @@ function TodayCard({ session, todayCode, busy, onPunch }) {
         </button>
         <button
           type="button"
-          disabled={busy || session == null || closed}
+          disabled={busy || blocked || session == null || closed}
           onClick={onPunch}
           style={{
             height: 52, padding: '0 26px', fontSize: 15, border: 'none', borderRadius: 12,
             fontFamily: 'inherit', fontWeight: 800,
-            ...(session != null && !closed
+            ...(session != null && !closed && !blocked
               ? { background: '#fff', color: '#433FBB', cursor: 'pointer', opacity: busy ? 0.6 : 1 }
               : { background: 'rgba(255,255,255,.22)', color: 'rgba(255,255,255,.75)', cursor: 'default' }),
           }}
@@ -273,6 +310,18 @@ function MyAttendance() {
   useEffect(() => {
     loadSessions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 현재 네트워크 판정 — 진입 시 + 탭을 다시 볼 때(와이파이를 바꾸고 돌아온 경우) 재확인
+  const [network, setNetwork] = useState(null)
+  useEffect(() => {
+    const check = () => {
+      if (document.visibilityState === 'hidden') return
+      fetchNetworkStatus().then(setNetwork).catch(() => {})
+    }
+    check()
+    document.addEventListener('visibilitychange', check)
+    return () => document.removeEventListener('visibilitychange', check)
   }, [])
   const sessionByDate = {}
   sessions.forEach((s) => { sessionByDate[s.workDate] = s })
@@ -487,6 +536,7 @@ function MyAttendance() {
       <TodayCard
         session={todaySession}
         todayCode={curDuties[TODAY.getDate()]?.code}
+        network={network}
         busy={busy}
         onPunch={punch}
       />

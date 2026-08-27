@@ -3,6 +3,7 @@ import DailyTable from '../components/DailyTable.jsx'
 import PeriodTable from '../components/PeriodTable.jsx'
 import DetailModal from '../components/DetailModal.jsx'
 import MyAttendance from '../components/MyAttendance.jsx'
+import ReminderToggle from '../components/ReminderToggle.jsx'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchMonthDutyMap } from '../../../shared/lib/roster.js'
@@ -142,6 +143,13 @@ function AttendancePage() {
                 {t}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* 내 출퇴근: 이 기기의 출퇴근 리마인더(웹 푸시) 켜기/끄기 */}
+        {mode === 'my' && (
+          <div style={{ marginLeft: 'auto' }}>
+            <ReminderToggle />
           </div>
         )}
 

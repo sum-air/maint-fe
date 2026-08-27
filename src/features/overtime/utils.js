@@ -1,5 +1,4 @@
-// 시간외근무 — 상태 정의. 신청·승인 데이터는 백엔드(overtime_record)가 아직 없어
-// 화면 상태로만 산다 (새로고침 시 소실). API 가 생기면 조회/저장으로 교체한다.
+// 시간외근무 — 상태 정의·표시 헬퍼. 데이터는 shared/lib/overtime.js 가 서버에서 읽는다.
 
 export const OT_ST = {
   wait: { c: '#C97A17', b: '#FBEFD9', label: '대기' },
@@ -7,14 +6,8 @@ export const OT_ST = {
   no: { c: '#D23B3B', b: '#FBE6E6', label: '반려' },
 }
 
-// 내 신청 내역 — 최신순
-export const INITIAL_MY_REQS = []
-
 // "MM.DD" 의 월 추출
 export const monthOf = (d) => Number(d.split('.')[0])
-
-// 팀 관리 — 접수된 신청 (week: 이번 주 총 근무시간, 52h 게이지용)
-export const INITIAL_ADMIN_REQS = []
 
 // "07.20" → "7월 20일(월)" (올해 기준, 앞자리 0 제거)
 export const dateWithDow = (d) => {

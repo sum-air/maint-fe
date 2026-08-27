@@ -1,18 +1,33 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
-import { OT_ST, INITIAL_ADMIN_REQS, groupReqsByTeam, dateWithDow, fmtHM, monthOf } from '../utils.js'
+import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
+import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
+import { decideOvertimeRequest, fetchMonthOvertimeRequests } from '../../../shared/lib/overtime.js'
+import { TEAM_COLORS } from '../../attendance/utils.js'
+import { OT_ST, groupReqsByTeam, dateWithDow, fmtHM } from '../utils.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 const TODAY = new Date()
 
 // 팀 시간외 관리 — 요약 칩 + 팀 그룹 테이블(월 누적) + 대기 건 승인/반려 + 인원/일자 필터
+// 목록은 /overtime-requests 실데이터(서버가 지정 팀/관리자 범위로 거른다), 이름·팀·직급은 정비 로스터로 해석.
 function AdminOvertime() {
-  // 승인/반려 결정 (백엔드 연동 시 API — 지금은 화면 상태)
-  const [decisions, setDecisions] = useState({})
+  const [reqs, setReqs] = useState([])
+  const [roster, setRoster] = useState([])
   const [year, setYear] = useState(TODAY.getFullYear())
   const [month, setMonth] = useState(TODAY.getMonth() + 1) // 조회 월
+  useEffect(() => {
+    let alive = true
+    fetchMaintRoster().then((l) => { if (alive) setRoster(l) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+  useEffect(() => {
+    let alive = true
+    fetchMonthOvertimeRequests(year, month - 1).then((l) => { if (alive) setReqs(l) }).catch(() => {})
+    return () => { alive = false }
+  }, [year, month])
   const [calOpen, setCalOpen] = useState(false)
   const [pickYear, setPickYear] = useState(TODAY.getFullYear())
   const [filterTeams, setFilterTeams] = useState([]) // 빈 배열 = 전체 (복수 선택)
@@ -37,14 +52,26 @@ function AdminOvertime() {
     }
   }
 
-  // 선택한 달의 접수 건만 ("MM.DD" 키 체계라 올해 것만 존재한다)
-  const withStatus = INITIAL_ADMIN_REQS.filter((r) => year === TODAY.getFullYear() && monthOf(r.date) === month).map((r) => ({
-    ...r,
-    status: decisions[`${r.name}_${r.date}`] ?? r.status,
-    hours: hoursBetween(r.start, r.end),
-  }))
+  // 사번 → 이름·팀·직급. 로스터에 없는 사람(퇴사 등)은 사번으로 표시
+  const byNo = Object.fromEntries(roster.map((p) => [p.employeeNo, p]))
+  const withStatus = reqs.map((r) => {
+    const p = byNo[r.employeeNo]
+    const team = p?.team ?? '기타'
+    return {
+      ...r,
+      name: p?.name ?? r.employeeNo,
+      role: p?.role ?? '',
+      team,
+      dot: TEAM_COLORS[team] ?? '#8A8A98',
+      hours: r.end ? hoursBetween(r.start, r.end) : 0, // 퇴근 전이면 아직 시간 없음
+      mine: r.employeeNo === CURRENT_USER.employeeNo, // 본인 건은 스스로 결정 불가 (서버도 거절)
+    }
+  })
 
-  const decide = (r, status) => setDecisions((s) => ({ ...s, [`${r.name}_${r.date}`]: status }))
+  const decide = (r, status) =>
+    decideOvertimeRequest(r.id, status)
+      .then((next) => setReqs((s) => s.map((x) => (x.id === r.id ? next : x))))
+      .catch((e) => alert(`처리 실패 — ${e.message}`))
 
   // 월 누적 — 그 사람의 해당 월 신청 중 반려 제외, 해당 행 날짜까지의 누적 (최신 행 = 월 전체 누적)
   const cumFor = (r) =>
@@ -265,20 +292,20 @@ function AdminOvertime() {
             {tm.reqs.map((r) => {
               const st = OT_ST[r.status]
               return (
-                <div key={`${r.name}_${r.date}`} className="ot-row" style={{ gridTemplateColumns: COLS }}>
+                <div key={r.id} className="ot-row" style={{ gridTemplateColumns: COLS }}>
                   <div className="ot-cell">
                     <span style={{ fontSize: 14, fontWeight: 700 }}>{r.name}</span>
                     <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 600, color: '#9C9CAB' }}>{r.role}</span>
                   </div>
                   <div className="ot-cell ot-mono">{dateWithDow(r.date)}</div>
-                  <div className="ot-cell ot-mono">{r.start}~{r.end}</div>
-                  <div className="ot-cell" style={{ fontSize: 12.5, fontWeight: 800, color: '#5350E2' }}>{fmtHM(r.hours)}</div>
+                  <div className="ot-cell ot-mono">{r.start}~{r.end ?? '—'}</div>
+                  <div className="ot-cell" style={{ fontSize: 12.5, fontWeight: 800, color: '#5350E2' }}>{r.end ? fmtHM(r.hours) : '—'}</div>
                   <div className="ot-cell ot-reason" style={{ fontSize: 12.5, fontWeight: 600, color: '#6E6E80' }}>
                     <span className="ot-reason-clip">{r.reason}</span>
                     <span className="ot-tip">{r.reason}</span>
                   </div>
                   <div className="ot-cell" style={{ display: 'flex', justifyContent: 'center', gap: 5 }}>
-                    {r.status === 'wait' ? (
+                    {r.status === 'wait' && !r.mine ? (
                       <>
                         <button type="button" className="ot-act ot-act--ok" onClick={() => setConfirm({ req: r, action: 'ok' })}>승인</button>
                         <button type="button" className="ot-act ot-act--no" onClick={() => setConfirm({ req: r, action: 'no' })}>반려</button>
@@ -319,7 +346,7 @@ function AdminOvertime() {
                   </span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#9C9CAB' }}>일시</span>
                   <span style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 700, color: '#4E4E5E' }}>
-                    {dateWithDow(req.date)} {req.start}~{req.end}
+                    {dateWithDow(req.date)} {req.start}~{req.end ?? '—'}
                   </span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#9C9CAB' }}>사유</span>
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: '#6E6E80' }}>{req.reason}</span>

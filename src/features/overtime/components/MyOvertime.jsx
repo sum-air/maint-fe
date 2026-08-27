@@ -1,16 +1,37 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
-import { OT_ST, INITIAL_MY_REQS, dateWithDow, fmtHM, monthOf } from '../utils.js'
+import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
+import { createOvertimeRequest, fetchOvertimeRequests } from '../../../shared/lib/overtime.js'
+import { OT_ST, dateWithDow, fmtHM, monthOf } from '../utils.js'
 import RequestModal from './RequestModal.jsx'
 
 const TODAY = new Date()
+const pad = (n) => String(n).padStart(2, '0')
+const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 // 내 시간외근무 — 스탯 4개 + 신청 버튼 + 내역 테이블 (디자인 근무자 1a)
+// 내역은 /overtime-requests 실데이터 — 보고 있는 달 + 이번 주를 함께 읽어 주간 합계가 월 경계에서 끊기지 않게 한다.
 function MyOvertime() {
-  const [reqs, setReqs] = useState(INITIAL_MY_REQS)
+  const [reqs, setReqs] = useState([])
   const [year, setYear] = useState(TODAY.getFullYear())
   const [month, setMonth] = useState(TODAY.getMonth() + 1) // 조회 월
+  const [reloadKey, setReloadKey] = useState(0)
+  useEffect(() => {
+    let alive = true
+    const ws = new Date(TODAY)
+    ws.setDate(TODAY.getDate() - ((TODAY.getDay() + 6) % 7))
+    const we = new Date(ws)
+    we.setDate(ws.getDate() + 6)
+    const ms = new Date(year, month - 1, 1)
+    const me = new Date(year, month, 0)
+    const from = ws < ms ? ws : ms
+    const to = we > me ? we : me
+    fetchOvertimeRequests(iso(from), iso(to))
+      .then((l) => { if (alive) setReqs(l.filter((r) => r.employeeNo === CURRENT_USER.employeeNo)) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [year, month, reloadKey])
   const [calOpen, setCalOpen] = useState(false)
   const [pickYear, setPickYear] = useState(TODAY.getFullYear())
   const [modalOpen, setModalOpen] = useState(false)
@@ -53,11 +74,15 @@ function MyOvertime() {
   const waitN = monthReqs.filter((r) => r.status === 'wait').length
   const noN = monthReqs.filter((r) => r.status === 'no').length
 
-  // 종료 시간은 퇴근 확정 시 채워지므로 신청 시점에는 null
-  const addReq = ({ date, start, reason }) => {
-    setReqs((s) => [{ id: Date.now(), date, start, end: null, reason, status: 'wait' }, ...s])
-    setMonth(monthOf(date)) // 신청한 달로 이동해 바로 보이게
-  }
+  // 종료 시간은 퇴근 확정 시 서버가 채운다 — 신청 시점에는 null
+  const addReq = ({ date, start, reason }) =>
+    createOvertimeRequest({ date, start, reason })
+      .then(() => {
+        setYear(TODAY.getFullYear())
+        setMonth(monthOf(date)) // 신청한 달로 이동해 바로 보이게
+        setReloadKey((k) => k + 1)
+      })
+      .catch((e) => alert(`신청 실패 — ${e.message}`))
 
   return (
     <div className="ot-card">

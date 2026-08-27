@@ -49,6 +49,3 @@ export const NW_ST = {
   CLOSE: { c: '#1F9D6B', b: '#E6F5EE' },
 }
 
-// NRC·W/O 목록 — 백엔드(work_order)가 아직 없어 화면 상태로만 산다.
-// reg: 등록일, close: 종결일 (CLOSE 전환 시 자동 기록), who: 작업자 표시("대표자 등 N명")
-export const INITIAL_NRC_WO = []

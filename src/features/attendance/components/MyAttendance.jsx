@@ -3,6 +3,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { CAT, CODE_CAT, TIMES, MONO } from '../../../shared/lib/workCodes.js'
 import { fetchMyMonthDuties } from '../../../shared/lib/roster.js'
 import { fetchMyWorkSessions, fetchNetworkStatus, checkIn, checkOut, kstHM, durationHours } from '../../../shared/lib/attendance.js'
+import { lateCheckoutSuggestion } from '../../../shared/lib/overtime.js'
+import OvertimeAfterModal from './OvertimeAfterModal.jsx'
 import { weekMeta } from '../utils.js'
 
 // 내 출퇴근 (근무자 화면) — 오늘 근무 카드 + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
@@ -329,13 +331,23 @@ function MyAttendance() {
   const todaySession = sessions.find((s) => !s.checkedOutAtUtc)
     ?? sessionByDate[isoOf(YEAR, TODAY.getMonth(), TODAY.getDate())] ?? null
 
+  // 늦은 퇴근(근무 종료 +20분 이상) → 시간외 사후 신청 제안 모달
+  const [otSuggest, setOtSuggest] = useState(null)
   const punch = async () => {
     if (busy) return
     setBusy(true)
     try {
-      if (todaySession && !todaySession.checkedOutAtUtc) await checkOut(todaySession.id)
-      else await checkIn()
-      await loadSessions()
+      if (todaySession && !todaySession.checkedOutAtUtc) {
+        const closed = await checkOut(todaySession.id)
+        await loadSessions()
+        const code = codeAt(Number(closed.workDate.slice(0, 4)), Number(closed.workDate.slice(5, 7)) - 1,
+          Number(closed.workDate.slice(8)))
+        const info = await lateCheckoutSuggestion(closed, TIMES[code]?.[1] ?? null).catch(() => null)
+        if (info) setOtSuggest({ ...info, shiftCode: code })
+      } else {
+        await checkIn()
+        await loadSessions()
+      }
     } catch (e) {
       alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
     } finally {
@@ -540,6 +552,7 @@ function MyAttendance() {
         busy={busy}
         onPunch={punch}
       />
+      {otSuggest && <OvertimeAfterModal info={otSuggest} onClose={() => setOtSuggest(null)} />}
 
       {/* ── 출퇴근 기록 + 이번 달 요약 ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'stretch' }}>

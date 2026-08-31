@@ -52,3 +52,26 @@ export async function decideOvertimeRequest(id, uiStatus) {
 }
 
 export const cancelOvertimeRequest = (id) => apiDelete(`/overtime-requests/${id}`)
+
+// ── 늦은 퇴근 → 시간외 사후 신청 제안 ──
+// 퇴근이 근무 종료보다 LATE_MIN 분 이상 늦고, 그날 내 신청이 아직 없으면 모달 데이터를 돌려준다.
+export const LATE_CHECKOUT_MIN = 20
+
+/**
+ * @param session 방금 닫힌 세션 { workDate 'YYYY-MM-DD', checkedOutAtUtc, employeeNo }
+ * @param endHour 그날 근무코드의 종료 시각(시, 24 이상 = 익일). 없으면(휴무 등) null
+ * @return { date 'MM.DD', endHM, outHM, overMin } | null
+ */
+export async function lateCheckoutSuggestion(session, endHour) {
+  if (endHour == null || !session?.checkedOutAtUtc) return null
+  const [y, m, d] = session.workDate.split('-').map(Number)
+  const plannedEnd = new Date(y, m - 1, d, endHour, 0, 0) // 브라우저 = KST
+  const out = new Date(session.checkedOutAtUtc)
+  const overMin = Math.floor((out - plannedEnd) / 60000)
+  if (overMin < LATE_CHECKOUT_MIN) return null
+  const mine = (await fetchOvertimeRequests(session.workDate, session.workDate))
+    .filter((r) => r.employeeNo === session.employeeNo)
+  if (mine.length > 0) return null // 이미 신청이 있다 — 다시 묻지 않는다
+  const hm = (dt) => `${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  return { date: toKey(session.workDate), endHM: hm(plannedEnd), outHM: hm(out), overMin }
+}

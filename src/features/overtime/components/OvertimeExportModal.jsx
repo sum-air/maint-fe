@@ -66,9 +66,8 @@ async function buildWorkbook({ year, month, team, rows, detail }) {
   const now = new Date()
 
   // 시트 공통 상단 — 제목(가운데) + 안내줄 + 색 머리글
-  const startSheet = (name, subtitle, headers, widths) => {
+  const startSheet = (name, subtitle, headers) => {
     const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }] })
-    ws.columns = widths.map((w) => ({ width: w }))
     const cols = headers.length
     const last = String.fromCharCode(64 + cols) // 열 수 ≤ 8 이라 A~H 로 충분
     ws.mergeCells(`A1:${last}1`)
@@ -115,9 +114,22 @@ async function buildWorkbook({ year, month, team, rows, detail }) {
     })
   }
 
+  // 모든 열 너비를 내용에 맞게 — 4행(머리글)부터 셀 표시폭(한글 2·영숫자 1)의 최대값 + 여백
+  const displayWidth = (v) =>
+    [...String(v ?? '')].reduce((w, ch) => w + (ch.charCodeAt(0) > 0x2e7f ? 2 : 1.05), 0)
+  const fitColumns = (ws) => {
+    for (let i = 1; i <= ws.columnCount; i++) {
+      const col = ws.getColumn(i)
+      let max = 0
+      col.eachCell({ includeEmpty: false }, (c, rowNo) => {
+        if (rowNo >= 4) max = Math.max(max, displayWidth(c.value))
+      })
+      col.width = Math.max(8, Math.ceil(max) + 4)
+    }
+  }
+
   // ── 1. 요약 시트 — 인원별 합계 ──
-  const ws1 = startSheet('요약', '집계', ['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고'],
-    [16, 11, 9, 11, 14, 19, 30])
+  const ws1 = startSheet('요약', '집계', ['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고'])
   for (const p of rows) {
     styleRow(ws1.addRow([p.team, p.name, p.role, p.count, fmtHM(p.totalMin / 60), p.nightMin ? fmtHM(p.nightMin / 60) : '—',
       p.noEnd ? `퇴근 미기록 ${p.noEnd}건 (0으로 집계)` : '']), { emphasisCol: 5, dimCol: 7 })
@@ -126,8 +138,7 @@ async function buildWorkbook({ year, month, team, rows, detail }) {
   styleTotal(ws1.addRow(['합계', '', '', sum('count'), fmtHM(sum('totalMin') / 60), fmtHM(sum('nightMin') / 60), '']), 5)
 
   // ── 2. 건별 상세 시트 — 인원별로 일자·시간·사유. 같은 사람은 팀·이름·직급 칸을 세로 병합 ──
-  const ws2 = startSheet('건별 상세', '건별 상세', ['팀', '이름', '직급', '일자', '시간', '시간외', '야간', '사유'],
-    [16, 11, 9, 14, 15, 11, 11, 34])
+  const ws2 = startSheet('건별 상세', '건별 상세', ['팀', '이름', '직급', '일자', '시간', '시간외', '야간', '사유'])
   let rowNo = 4
   for (const person of detail) {
     const first = rowNo + 1
@@ -143,6 +154,8 @@ async function buildWorkbook({ year, month, team, rows, detail }) {
     }
   }
 
+  fitColumns(ws1)
+  fitColumns(ws2)
   const buffer = await wb.xlsx.writeBuffer()
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 }

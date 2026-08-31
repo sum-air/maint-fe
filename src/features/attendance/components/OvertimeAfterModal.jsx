@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { createOvertimeRequest } from '../../../shared/lib/overtime.js'
+import { showToast } from '../../../shared/lib/toast.js'
 import { fmtHM } from '../../overtime/utils.js'
 
 // 늦은 퇴근 → 시간외 사후 신청 모달 (시안 A · 요약 카드형)
@@ -16,6 +17,7 @@ function OvertimeAfterModal({ info, onClose }) {
     setBusy(true)
     try {
       await createOvertimeRequest({ date: info.date, start: info.endHM, reason: reason.trim() })
+      showToast('시간외 신청이 접수되었습니다')
       onClose()
     } catch (e) {
       alert(`신청 실패 — ${e.message}`)

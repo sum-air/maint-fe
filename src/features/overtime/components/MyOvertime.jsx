@@ -3,6 +3,7 @@ import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
 import { createOvertimeRequest, fetchOvertimeRequests } from '../../../shared/lib/overtime.js'
+import { showToast } from '../../../shared/lib/toast.js'
 import { OT_ST, dateWithDow, fmtHM, monthOf } from '../utils.js'
 import RequestModal from './RequestModal.jsx'
 
@@ -78,6 +79,7 @@ function MyOvertime() {
   const addReq = ({ date, start, reason }) =>
     createOvertimeRequest({ date, start, reason })
       .then(() => {
+        showToast('시간외 신청이 접수되었습니다')
         setYear(TODAY.getFullYear())
         setMonth(monthOf(date)) // 신청한 달로 이동해 바로 보이게
         setReloadKey((k) => k + 1)

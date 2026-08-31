@@ -6,8 +6,8 @@ const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 const pad = (n) => String(n).padStart(2, '0')
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
-// 히트맵과 같은 문법 — 배경 없이 코드 글자에만 색
-const codeColor = (code) => {
+// 히트맵과 같은 문법 — 배경 없이 코드 글자에만 색 (엑셀 추출도 같은 색을 쓴다)
+export const codeColor = (code) => {
   const cat = CODE_CAT[code]
   if (cat === 'off') return '#8A8F9C'
   return PAL[cat] ? PAL[cat][1] : CAT[cat]?.tx ?? '#3A3A46'

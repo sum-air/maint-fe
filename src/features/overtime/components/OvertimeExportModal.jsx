@@ -3,6 +3,7 @@ import { MONO } from '../../../shared/lib/workCodes.js'
 import { fetchMonthOvertimeRequests } from '../../../shared/lib/overtime.js'
 import { showToast } from '../../../shared/lib/toast.js'
 import { dateWithDow, fmtHM } from '../utils.js'
+import { TEAM_ORDER } from '../../../shared/lib/maintRoster.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 const TODAY = new Date()
@@ -12,6 +13,11 @@ const ROLE_ORDER = ['본부장', '부장', '차장', '과장', '대리', '사원
 const roleRank = (role) => {
   const i = ROLE_ORDER.indexOf(role)
   return i === -1 ? ROLE_ORDER.length : i
+}
+// 팀 순서 — 화면 로스터와 같은 기준, 모르는 팀은 뒤로
+const teamRank = (team) => {
+  const i = TEAM_ORDER.indexOf(team)
+  return i === -1 ? TEAM_ORDER.length : i
 }
 
 // "HH:MM" → 분
@@ -147,10 +153,20 @@ async function buildWorkbook({ year, month, team, rows, detail }) {
       styleRow(ws2.addRow([person.team, person.name, person.role, d.date, d.span, d.total, d.night, d.reason]),
         { emphasisCol: 6 })
     }
-    if (person.items.length > 1) {
-      for (const col of ['A', 'B', 'C']) {
-        ws2.mergeCells(`${col}${first}:${col}${rowNo}`)
-      }
+    // 사람별 소계 — 요약 시트와 같은 값 (퇴근 미기록 건은 0으로 집계)
+    rowNo += 1
+    const sub = ws2.addRow(['', '', '', '소계', `${person.items.length}건`,
+      fmtHM(person.totalMin / 60), person.nightMin ? fmtHM(person.nightMin / 60) : '—',
+      person.noEnd ? `퇴근 미기록 ${person.noEnd}건 (0으로 집계)` : ''])
+    sub.height = 18
+    sub.eachCell({ includeEmpty: true }, (c, col) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F7FA' } }
+      c.font = { size: 10, bold: true, color: { argb: col === 6 ? 'FF433FBB' : col === 8 ? 'FF8A8A98' : 'FF3A3A46' } }
+      c.alignment = center
+      c.border = box
+    })
+    for (const col of ['A', 'B', 'C']) {
+      ws2.mergeCells(`${col}${first}:${col}${rowNo}`)
     }
   }
 
@@ -182,9 +198,12 @@ function OvertimeExportModal({ roster, onClose }) {
         showToast(`${year}년 ${month}월 승인된 시간외 신청이 없습니다`, 'error')
         return
       }
-      // 건별 상세 — 요약과 같은 직급순 인원 순서, 사람 안에서는 날짜순
-      const detail = rows.map((p) => ({
+      // 건별 상세 — 팀 순서 우선, 팀 안에서 직급순 → 이름순. 사람 안에서는 날짜순
+      const detail = [...rows]
+        .sort((a, b) => teamRank(a.team) - teamRank(b.team) || roleRank(a.role) - roleRank(b.role) || a.name.localeCompare(b.name, 'ko'))
+        .map((p) => ({
         team: p.team, name: p.name, role: p.role,
+        totalMin: p.totalMin, nightMin: p.nightMin, noEnd: p.noEnd,
         items: approved.filter((r) => r.employeeNo === p.employeeNo)
           .sort((a, b) => a.date.localeCompare(b.date))
           .map((r) => {

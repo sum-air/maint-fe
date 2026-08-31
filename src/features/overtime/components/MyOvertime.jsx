@@ -84,7 +84,7 @@ function MyOvertime() {
         setMonth(monthOf(date)) // 신청한 달로 이동해 바로 보이게
         setReloadKey((k) => k + 1)
       })
-      .catch((e) => alert(`신청 실패 — ${e.message}`))
+      .catch((e) => showToast(`신청 실패 — ${e.message}`, 'error'))
 
   return (
     <div className="ot-card">

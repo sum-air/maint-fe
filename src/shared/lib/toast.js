@@ -14,8 +14,17 @@ function injectStyles() {
   document.head.appendChild(style)
 }
 
-/** @param message 표시할 문구  @param duration 유지 시간(ms, 기본 2500) */
-export function showToast(message, duration = 2500) {
+const ICONS = {
+  success: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5EE0A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+  error: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#FF7A7A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+}
+
+/**
+ * @param message 표시할 문구
+ * @param type 'success'(기본) | 'error' — 에러는 브라우저 기본 alert 대신 이걸 쓴다
+ * @param duration 유지 시간(ms, 기본 2500 · 에러는 3500)
+ */
+export function showToast(message, type = 'success', duration) {
   injectStyles()
   const el = document.createElement('div')
   el.setAttribute('role', 'status')
@@ -29,11 +38,11 @@ export function showToast(message, duration = 2500) {
     animation: 'toast-in .22s ease both',
     pointerEvents: 'none', whiteSpace: 'nowrap',
   })
-  el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#5EE0A0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg><span></span>`
+  el.innerHTML = `${ICONS[type] ?? ICONS.success}<span></span>`
   el.querySelector('span').textContent = message
   document.body.appendChild(el)
   setTimeout(() => {
     el.style.animation = 'toast-out .2s ease both'
     setTimeout(() => el.remove(), 220)
-  }, duration)
+  }, duration ?? (type === 'error' ? 3500 : 2500))
 }

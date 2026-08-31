@@ -7,6 +7,7 @@ import { decideOvertimeRequest, fetchMonthOvertimeRequests } from '../../../shar
 import { TEAM_COLORS } from '../../attendance/utils.js'
 import { OT_ST, groupReqsByTeam, dateWithDow, fmtHM } from '../utils.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
+import { showToast } from '../../../shared/lib/toast.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 const TODAY = new Date()
@@ -70,8 +71,11 @@ function AdminOvertime() {
 
   const decide = (r, status) =>
     decideOvertimeRequest(r.id, status)
-      .then((next) => setReqs((s) => s.map((x) => (x.id === r.id ? next : x))))
-      .catch((e) => alert(`처리 실패 — ${e.message}`))
+      .then((next) => {
+        showToast(status === 'ok' ? '승인 처리되었습니다' : '반려 처리되었습니다')
+        setReqs((s) => s.map((x) => (x.id === r.id ? next : x)))
+      })
+      .catch((e) => showToast(`처리 실패 — ${e.message}`, 'error'))
 
   // 월 누적 — 그 사람의 해당 월 신청 중 반려 제외, 해당 행 날짜까지의 누적 (최신 행 = 월 전체 누적)
   const cumFor = (r) =>

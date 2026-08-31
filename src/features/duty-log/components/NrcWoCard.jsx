@@ -3,6 +3,7 @@ import { MONO } from '../../../shared/lib/workCodes.js'
 import { createWorkOrder, deleteWorkOrder, fetchWorkOrders, updateWorkOrder } from '../../../shared/lib/worklog.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
 import { AIRCRAFT_REGS, NW_TYPE, NW_ST, todayKey, fmtDate } from '../utils.js'
+import { showToast } from '../../../shared/lib/toast.js'
 
 const PAGE_SIZE = 5
 
@@ -268,15 +269,15 @@ function NrcWoCard({ roster }) {
   const saveNew = (v) =>
     createWorkOrder({ ...v, st: 'OPEN', close: '' })
       .then((saved) => setItems((s) => [saved, ...s]))
-      .catch((e) => alert(`등록 실패 — ${e.message}`))
+      .catch((e) => showToast(`등록 실패 — ${e.message}`, 'error'))
   const saveEdit = (orig) => (v) =>
     updateWorkOrder(orig.id, v)
       .then((saved) => setItems((s) => s.map((x) => (x.id === orig.id ? saved : x))))
-      .catch((e) => alert(`저장 실패 — ${e.message}`))
+      .catch((e) => showToast(`저장 실패 — ${e.message}`, 'error'))
   const remove = (item) =>
     deleteWorkOrder(item.id)
       .then(() => setItems((s) => s.filter((x) => x.id !== item.id)))
-      .catch((e) => alert(`삭제 실패 — ${e.message}`))
+      .catch((e) => showToast(`삭제 실패 — ${e.message}`, 'error'))
 
   return (
     <div className="dl-card">

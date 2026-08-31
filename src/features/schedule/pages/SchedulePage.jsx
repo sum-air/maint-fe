@@ -9,6 +9,7 @@ import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchDutyAssignments, saveDutyAssignments, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
 import { getTokenClaims } from '../../../shared/lib/api.js'
 import './schedule.css'
+import { showToast } from '../../../shared/lib/toast.js'
 
 // 내 신원 — 토큰 클레임에서 읽는다 (UI 노출 판단용, 강제는 서버가 한다)
 const ME = getTokenClaims()
@@ -121,7 +122,7 @@ function SchedulePage() {
     const updates = Object.fromEntries(
       Object.entries(raw).filter(([key]) => canEdit(Number(key.split('_')[0]))))
     if (Object.keys(updates).length === 0) {
-      alert(SCOPE_MESSAGE)
+      showToast(SCOPE_MESSAGE, 'error')
       return
     }
     const items = Object.entries(updates).map(([key, v]) => {
@@ -135,7 +136,7 @@ function SchedulePage() {
     })
     saveDutyAssignments(items)
       .then(() => setCells((s) => ({ ...s, ...updates })))
-      .catch((e) => alert(`근무 저장 실패 — ${e.message}`))
+      .catch((e) => showToast(`근무 저장 실패 — ${e.message}`, 'error'))
   }
 
   // 셀 호버 팝오버 (디자인 showPop 로직)
@@ -157,7 +158,7 @@ function SchedulePage() {
 
   const openEdit = (cell) => {
     if (!canEdit(cell.pi)) {
-      alert(SCOPE_MESSAGE)
+      showToast(SCOPE_MESSAGE, 'error')
       return
     }
     const dow = WEEK[new Date(year, month, cell.d).getDay()]

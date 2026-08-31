@@ -13,6 +13,7 @@ import {
 } from '../../../shared/lib/worklog.js'
 import { CAT_GROUPS, todayKey, nowHM, fmtDate } from '../utils.js'
 import './duty-log.css'
+import { showToast } from '../../../shared/lib/toast.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -58,18 +59,18 @@ function TodoMemo() {
     if (!cur) return
     toggleTodo(id, !cur.done)
       .then((next) => setTodos((s) => s.map((t) => (t.id === id ? next : t))))
-      .catch((e) => alert(e.message))
+      .catch((e) => showToast(e.message, 'error'))
   }
   const remove = (id) =>
     deleteTodo(id)
       .then(() => setTodos((s) => s.filter((t) => t.id !== id)))
-      .catch((e) => alert(e.message))
+      .catch((e) => showToast(e.message, 'error'))
   const add = () => {
     const text = draft.trim()
     if (!text) return
     addTodo(text)
       .then((t) => setTodos((s) => [...s, t]))
-      .catch((e) => alert(e.message))
+      .catch((e) => showToast(e.message, 'error'))
     setDraft('')
   }
 
@@ -334,7 +335,7 @@ function DutyLogPage() {
     if (!canAdd) return
     createWorkLog({ key: date, start, end: end === start ? '' : end, gi: cat.gi, c: cat.c, t: content.trim() })
       .then((entry) => setMonthLogs((m) => ({ ...m, list: [...m.list, entry] })))
-      .catch((e) => alert(`일지 저장 실패 — ${e.message}`))
+      .catch((e) => showToast(`일지 저장 실패 — ${e.message}`, 'error'))
     setCat(null)
     setContent('')
     setStart(nowHM())

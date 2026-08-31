@@ -5,6 +5,8 @@ import { CURRENT_USER } from '../shared/lib/currentUser.js'
 import { fetchMyMonthDuties } from '../shared/lib/roster.js'
 import { fetchMyWorkSessions, checkIn, checkOut, kstHM } from '../shared/lib/attendance.js'
 import { fetchWorkLogs } from '../shared/lib/worklog.js'
+import { lateCheckoutSuggestion } from '../shared/lib/overtime.js'
+import OvertimeAfterModal from '../features/attendance/components/OvertimeAfterModal.jsx'
 import { CAT_GROUPS } from '../features/duty-log/utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -270,11 +272,23 @@ function HomePage() {
     return () => { alive = false }
   }, [])
 
+  // 늦은 퇴근(근무 종료 +20분 이상) → 시간외 사후 신청 제안 모달
+  const [otSuggest, setOtSuggest] = useState(null)
   const punch = async () => {
     if (busy) return
     setBusy(true)
     try {
-      setSession(session && !session.checkedOutAtUtc ? await checkOut(session.id) : await checkIn())
+      if (session && !session.checkedOutAtUtc) {
+        const closed = await checkOut(session.id)
+        setSession(closed)
+        // duties 는 이번 달 것만 있다 — 다른 달(월말 야간 등) 근무일이면 판정을 건너뛴다
+        const sameMonth = closed.workDate.slice(0, 7) === isoDate(new Date()).slice(0, 7)
+        const code = sameMonth ? duties[Number(closed.workDate.slice(8))]?.code : undefined
+        const info = await lateCheckoutSuggestion(closed, TIMES[code]?.[1] ?? null).catch(() => null)
+        if (info) setOtSuggest({ ...info, shiftCode: code })
+      } else {
+        setSession(await checkIn())
+      }
     } catch (e) {
       alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
     } finally {
@@ -301,6 +315,7 @@ function HomePage() {
         <MonthCard duties={duties} />
       </div>
       <WorkCard />
+      {otSuggest && <OvertimeAfterModal info={otSuggest} onClose={() => setOtSuggest(null)} />}
     </section>
   )
 }

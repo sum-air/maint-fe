@@ -7,6 +7,7 @@ import { decideOvertimeRequest, fetchMonthOvertimeRequests } from '../../../shar
 import { TEAM_COLORS } from '../../attendance/utils.js'
 import { OT_ST, groupReqsByTeam, dateWithDow, fmtHM } from '../utils.js'
 import DayCalPopover from '../../../shared/components/DayCalPopover.jsx'
+import OvertimeExportModal from './OvertimeExportModal.jsx'
 import { showToast } from '../../../shared/lib/toast.js'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -17,6 +18,7 @@ const TODAY = new Date()
 function AdminOvertime() {
   const [reqs, setReqs] = useState([])
   const [roster, setRoster] = useState([])
+  const [xlOpen, setXlOpen] = useState(false) // 인사팀 제출용 월별 엑셀 추출
   const [year, setYear] = useState(TODAY.getFullYear())
   const [month, setMonth] = useState(TODAY.getMonth() + 1) // 조회 월
   useEffect(() => {
@@ -271,6 +273,10 @@ function AdminOvertime() {
             <i style={{ width: 7, height: 7, borderRadius: '50%', background: '#5350E2' }} />
             총 시간외 <b>{fmtHM(totalOt)}</b>
           </span>
+          <button type="button" className="ot-filter" style={{ fontWeight: 800 }} onClick={() => setXlOpen(true)}>
+            <svg viewBox="0 0 24 24" style={{ width: 12, height: 12 }}><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+            엑셀
+          </button>
         </div>
       </div>
 
@@ -374,6 +380,8 @@ function AdminOvertime() {
           </div>
         )
       })()}
+
+      {xlOpen && <OvertimeExportModal roster={roster} onClose={() => setXlOpen(false)} />}
     </div>
   )
 }

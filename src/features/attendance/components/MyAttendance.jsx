@@ -6,6 +6,7 @@ import { fetchMyWorkSessions, fetchNetworkStatus, checkIn, checkOut, kstHM, dura
 import { lateCheckoutSuggestion } from '../../../shared/lib/overtime.js'
 import OvertimeAfterModal from './OvertimeAfterModal.jsx'
 import { weekMeta } from '../utils.js'
+import { showToast } from '../../../shared/lib/toast.js'
 
 // 내 출퇴근 (근무자 화면) — 오늘 근무 카드 + 출퇴근 기록 + 이번 달 요약 + 캘린더 + 근무시간 차트.
 // 근무코드는 /duty-assignments, 출퇴근 기록은 /work-sessions 실데이터.
@@ -349,7 +350,7 @@ function MyAttendance() {
         await loadSessions()
       }
     } catch (e) {
-      alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
+      showToast(e.message, 'error') // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
     } finally {
       setBusy(false)
     }

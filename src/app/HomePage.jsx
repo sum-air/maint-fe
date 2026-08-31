@@ -8,6 +8,7 @@ import { fetchWorkLogs } from '../shared/lib/worklog.js'
 import { lateCheckoutSuggestion } from '../shared/lib/overtime.js'
 import OvertimeAfterModal from '../features/attendance/components/OvertimeAfterModal.jsx'
 import { CAT_GROUPS } from '../features/duty-log/utils.js'
+import { showToast } from '../shared/lib/toast.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -290,7 +291,7 @@ function HomePage() {
         setSession(await checkIn())
       }
     } catch (e) {
-      alert(e.message) // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
+      showToast(e.message, 'error') // 예: 사내 네트워크에서만 출퇴근을 찍을 수 있습니다
     } finally {
       setBusy(false)
     }

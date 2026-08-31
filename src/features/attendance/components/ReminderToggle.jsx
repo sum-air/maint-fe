@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { disable, enable, getState, isIosBrowserTab } from '../../../shared/lib/push.js'
+import { showToast } from '../../../shared/lib/toast.js'
 
 // 벨 아이콘 — off 면 사선
 const Bell = ({ off }) => (
@@ -21,7 +22,7 @@ function ReminderToggle() {
     try {
       setState(state === 'on' ? await disable() : await enable())
     } catch (e) {
-      alert(`알림 설정 실패 — ${e.message}`)
+      showToast(`알림 설정 실패 — ${e.message}`, 'error')
     } finally {
       setBusy(false)
     }

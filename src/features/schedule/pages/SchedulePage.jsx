@@ -7,6 +7,7 @@ import DailyView from '../components/DailyView.jsx'
 import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchDutyAssignments, saveDutyAssignments, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
+import printSchedule from '../lib/printSchedule.js'
 import { getTokenClaims } from '../../../shared/lib/api.js'
 import './schedule.css'
 import { showToast } from '../../../shared/lib/toast.js'
@@ -314,6 +315,13 @@ function SchedulePage() {
               통계
             </span>
           </div>
+          {/* 월간 현황 인쇄/PDF — 인쇄 다이얼로그에서 프린터 또는 "PDF로 저장" 선택 */}
+          {view === 'month' && people && (
+            <span className="sched-tab sched-print" onClick={() => printSchedule({ year, month, teams, roster, cells })}>
+              <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
+              출력
+            </span>
+          )}
         </div>
       </div>
 

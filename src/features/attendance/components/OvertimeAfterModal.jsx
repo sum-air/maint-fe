@@ -20,7 +20,7 @@ function OvertimeAfterModal({ info, onClose }) {
       showToast('시간외 신청이 접수되었습니다')
       onClose()
     } catch (e) {
-      alert(`신청 실패 — ${e.message}`)
+      showToast(`신청 실패 — ${e.message}`, 'error')
       setBusy(false)
     }
   }

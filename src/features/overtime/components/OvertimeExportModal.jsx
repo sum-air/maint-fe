@@ -56,7 +56,70 @@ export function summarize(requests, roster) {
     .sort((a, b) => roleRank(a.role) - roleRank(b.role) || a.name.localeCompare(b.name, 'ko'))
 }
 
-// 시간외근무 월별 엑셀(CSV) 추출 — 인사팀 제출용. 승인 건만, 직급순, 야간(22:00~06:00) 열 포함.
+// 서식 있는 XLSX 생성 — 제목·안내·표 머리글·테두리·합계. exceljs 는 무거워서(약 1MB) 추출 시점에만 로드.
+async function buildWorkbook({ year, month, team, rows }) {
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet(`${year}-${pad(month)}`, { views: [{ showGridLines: false }] })
+  ws.columns = [
+    { width: 16 }, { width: 11 }, { width: 9 }, { width: 11 }, { width: 14 }, { width: 19 }, { width: 30 },
+  ]
+  const thin = { style: 'thin', color: { argb: 'FFE1E1E9' } }
+  const box = { top: thin, left: thin, bottom: thin, right: thin }
+
+  // 제목 + 안내
+  ws.mergeCells('A1:G1')
+  const title = ws.getCell('A1')
+  title.value = `${year}년 ${month}월 시간외근무 집계`
+  title.font = { size: 14, bold: true, color: { argb: 'FF1A1A22' } }
+  ws.getRow(1).height = 26
+  ws.mergeCells('A2:G2')
+  const meta = ws.getCell('A2')
+  const now = new Date()
+  meta.value = `대상: ${team ?? '전체'}  ·  승인 건만 집계  ·  야간 = 22:00~06:00  ·  추출일 ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+  meta.font = { size: 9, color: { argb: 'FF8A8A98' } }
+  ws.getRow(2).height = 14
+  ws.getRow(3).height = 6
+
+  // 표 머리글
+  const header = ws.getRow(4)
+  header.values = ['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고']
+  header.height = 20
+  header.eachCell((c) => {
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F0FB' } }
+    c.font = { size: 10, bold: true, color: { argb: 'FF433FBB' } }
+    c.alignment = { horizontal: 'center', vertical: 'middle' }
+    c.border = box
+  })
+
+  // 데이터
+  for (const p of rows) {
+    const r = ws.addRow([p.team, p.name, p.role, p.count, fmtHM(p.totalMin / 60), p.nightMin ? fmtHM(p.nightMin / 60) : '—',
+      p.noEnd ? `퇴근 미기록 ${p.noEnd}건 (0으로 집계)` : ''])
+    r.height = 18
+    r.eachCell({ includeEmpty: true }, (c, col) => {
+      c.border = box
+      c.font = { size: 10, color: { argb: col === 5 ? 'FF433FBB' : col === 7 ? 'FF8A8A98' : 'FF3A3A46' }, bold: col === 5 }
+      c.alignment = { horizontal: col <= 2 || col === 7 ? 'left' : 'center', vertical: 'middle' }
+    })
+  }
+
+  // 합계
+  const sum = (k) => rows.reduce((s, p) => s + p[k], 0)
+  const total = ws.addRow(['합계', '', '', sum('count'), fmtHM(sum('totalMin') / 60), fmtHM(sum('nightMin') / 60), ''])
+  total.height = 20
+  total.eachCell({ includeEmpty: true }, (c, col) => {
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F7FA' } }
+    c.font = { size: 10, bold: true, color: { argb: col === 5 ? 'FF433FBB' : 'FF1A1A22' } }
+    c.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' }
+    c.border = { ...box, top: { style: 'medium', color: { argb: 'FFC7C5FF' } } }
+  })
+
+  const buffer = await wb.xlsx.writeBuffer()
+  return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+}
+
+// 시간외근무 월별 엑셀(XLSX) 추출 — 인사팀 제출용. 승인 건만, 직급순, 야간(22:00~06:00) 열 포함.
 function OvertimeExportModal({ roster, onClose }) {
   const [year, setYear] = useState(TODAY.getFullYear())
   const [month, setMonth] = useState(TODAY.getMonth() + 1)
@@ -78,21 +141,11 @@ function OvertimeExportModal({ roster, onClose }) {
         showToast(`${year}년 ${month}월 승인된 시간외 신청이 없습니다`, 'error')
         return
       }
-      const table = [['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고']]
-      for (const p of rows) {
-        table.push([p.team, p.name, p.role, p.count, fmtHM(p.totalMin / 60), p.nightMin ? fmtHM(p.nightMin / 60) : '—',
-          p.noEnd ? `퇴근 미기록 ${p.noEnd}건 (0으로 집계)` : ''])
-      }
-      const sum = (k) => rows.reduce((s, p) => s + p[k], 0)
-      table.push(['합계', '', '', sum('count'), fmtHM(sum('totalMin') / 60), fmtHM(sum('nightMin') / 60), ''])
-
-      const esc = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replaceAll('"', '""')}"` : String(v))
-      const csv = table.map((r) => r.map(esc).join(',')).join('\n')
-      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }) // BOM — 엑셀 한글 깨짐 방지
+      const blob = await buildWorkbook({ year, month, team, rows })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `시간외근무_${year}-${pad(month)}${team ? `_${team}` : ''}.csv`
+      a.download = `시간외근무_${year}-${pad(month)}${team ? `_${team}` : ''}.xlsx`
       a.click()
       URL.revokeObjectURL(url)
       onClose()

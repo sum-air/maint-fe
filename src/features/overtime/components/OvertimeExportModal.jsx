@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { fetchMonthOvertimeRequests } from '../../../shared/lib/overtime.js'
 import { showToast } from '../../../shared/lib/toast.js'
-import { fmtHM } from '../utils.js'
+import { dateWithDow, fmtHM } from '../utils.js'
 
 const pad = (n) => String(n).padStart(2, '0')
 const TODAY = new Date()
@@ -57,63 +57,91 @@ export function summarize(requests, roster) {
 }
 
 // 서식 있는 XLSX 생성 — 제목·안내·표 머리글·테두리·합계. exceljs 는 무거워서(약 1MB) 추출 시점에만 로드.
-async function buildWorkbook({ year, month, team, rows }) {
+async function buildWorkbook({ year, month, team, rows, detail }) {
   const ExcelJS = (await import('exceljs')).default
   const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet(`${year}-${pad(month)}`, { views: [{ showGridLines: false }] })
-  ws.columns = [
-    { width: 16 }, { width: 11 }, { width: 9 }, { width: 11 }, { width: 14 }, { width: 19 }, { width: 30 },
-  ]
   const thin = { style: 'thin', color: { argb: 'FFE1E1E9' } }
   const box = { top: thin, left: thin, bottom: thin, right: thin }
-
-  // 제목 + 안내
-  ws.mergeCells('A1:G1')
-  const title = ws.getCell('A1')
-  title.value = `${year}년 ${month}월 시간외근무 집계`
-  title.font = { size: 14, bold: true, color: { argb: 'FF1A1A22' } }
-  ws.getRow(1).height = 26
-  ws.mergeCells('A2:G2')
-  const meta = ws.getCell('A2')
+  const center = { horizontal: 'center', vertical: 'middle' } // 요청: 모든 텍스트 가운데 정렬
   const now = new Date()
-  meta.value = `대상: ${team ?? '전체'}  ·  승인 건만 집계  ·  야간 = 22:00~06:00  ·  추출일 ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-  meta.font = { size: 9, color: { argb: 'FF8A8A98' } }
-  ws.getRow(2).height = 14
-  ws.getRow(3).height = 6
 
-  // 표 머리글
-  const header = ws.getRow(4)
-  header.values = ['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고']
-  header.height = 20
-  header.eachCell((c) => {
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F0FB' } }
-    c.font = { size: 10, bold: true, color: { argb: 'FF433FBB' } }
-    c.alignment = { horizontal: 'center', vertical: 'middle' }
-    c.border = box
-  })
+  // 시트 공통 상단 — 제목(가운데) + 안내줄 + 색 머리글
+  const startSheet = (name, subtitle, headers, widths) => {
+    const ws = wb.addWorksheet(name, { views: [{ showGridLines: false }] })
+    ws.columns = widths.map((w) => ({ width: w }))
+    const cols = headers.length
+    const last = String.fromCharCode(64 + cols) // 열 수 ≤ 8 이라 A~H 로 충분
+    ws.mergeCells(`A1:${last}1`)
+    const title = ws.getCell('A1')
+    title.value = `${year}년 ${month}월 시간외근무 ${subtitle}`
+    title.font = { size: 14, bold: true, color: { argb: 'FF1A1A22' } }
+    title.alignment = center
+    ws.getRow(1).height = 26
+    ws.mergeCells(`A2:${last}2`)
+    const meta = ws.getCell('A2')
+    meta.value = `대상: ${team ?? '전체'}  ·  승인 건만 집계  ·  야간 = 22:00~06:00  ·  추출일 ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    meta.font = { size: 9, color: { argb: 'FF8A8A98' } }
+    meta.alignment = center
+    ws.getRow(2).height = 14
+    ws.getRow(3).height = 6
+    const header = ws.getRow(4)
+    header.values = headers
+    header.height = 20
+    header.eachCell((c) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F0FB' } }
+      c.font = { size: 10, bold: true, color: { argb: 'FF433FBB' } }
+      c.alignment = center
+      c.border = box
+    })
+    return ws
+  }
 
-  // 데이터
-  for (const p of rows) {
-    const r = ws.addRow([p.team, p.name, p.role, p.count, fmtHM(p.totalMin / 60), p.nightMin ? fmtHM(p.nightMin / 60) : '—',
-      p.noEnd ? `퇴근 미기록 ${p.noEnd}건 (0으로 집계)` : ''])
+  const styleRow = (r, { emphasisCol, dimCol } = {}) => {
     r.height = 18
     r.eachCell({ includeEmpty: true }, (c, col) => {
       c.border = box
-      c.font = { size: 10, color: { argb: col === 5 ? 'FF433FBB' : col === 7 ? 'FF8A8A98' : 'FF3A3A46' }, bold: col === 5 }
-      c.alignment = { horizontal: col <= 2 || col === 7 ? 'left' : 'center', vertical: 'middle' }
+      c.font = { size: 10, bold: col === emphasisCol,
+        color: { argb: col === emphasisCol ? 'FF433FBB' : col === dimCol ? 'FF8A8A98' : 'FF3A3A46' } }
+      c.alignment = { ...center, wrapText: true }
+    })
+  }
+  const styleTotal = (r, emphasisCol) => {
+    r.height = 20
+    r.eachCell({ includeEmpty: true }, (c, col) => {
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F7FA' } }
+      c.font = { size: 10, bold: true, color: { argb: col === emphasisCol ? 'FF433FBB' : 'FF1A1A22' } }
+      c.alignment = center
+      c.border = { ...box, top: { style: 'medium', color: { argb: 'FFC7C5FF' } } }
     })
   }
 
-  // 합계
+  // ── 1. 요약 시트 — 인원별 합계 ──
+  const ws1 = startSheet('요약', '집계', ['팀', '이름', '직급', '승인 건수', '총 시간외', '야간 (22:00~06:00)', '비고'],
+    [16, 11, 9, 11, 14, 19, 30])
+  for (const p of rows) {
+    styleRow(ws1.addRow([p.team, p.name, p.role, p.count, fmtHM(p.totalMin / 60), p.nightMin ? fmtHM(p.nightMin / 60) : '—',
+      p.noEnd ? `퇴근 미기록 ${p.noEnd}건 (0으로 집계)` : '']), { emphasisCol: 5, dimCol: 7 })
+  }
   const sum = (k) => rows.reduce((s, p) => s + p[k], 0)
-  const total = ws.addRow(['합계', '', '', sum('count'), fmtHM(sum('totalMin') / 60), fmtHM(sum('nightMin') / 60), ''])
-  total.height = 20
-  total.eachCell({ includeEmpty: true }, (c, col) => {
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F7FA' } }
-    c.font = { size: 10, bold: true, color: { argb: col === 5 ? 'FF433FBB' : 'FF1A1A22' } }
-    c.alignment = { horizontal: col === 1 ? 'left' : 'center', vertical: 'middle' }
-    c.border = { ...box, top: { style: 'medium', color: { argb: 'FFC7C5FF' } } }
-  })
+  styleTotal(ws1.addRow(['합계', '', '', sum('count'), fmtHM(sum('totalMin') / 60), fmtHM(sum('nightMin') / 60), '']), 5)
+
+  // ── 2. 건별 상세 시트 — 인원별로 일자·시간·사유. 같은 사람은 팀·이름·직급 칸을 세로 병합 ──
+  const ws2 = startSheet('건별 상세', '건별 상세', ['팀', '이름', '직급', '일자', '시간', '시간외', '야간', '사유'],
+    [16, 11, 9, 14, 15, 11, 11, 34])
+  let rowNo = 4
+  for (const person of detail) {
+    const first = rowNo + 1
+    for (const d of person.items) {
+      rowNo += 1
+      styleRow(ws2.addRow([person.team, person.name, person.role, d.date, d.span, d.total, d.night, d.reason]),
+        { emphasisCol: 6 })
+    }
+    if (person.items.length > 1) {
+      for (const col of ['A', 'B', 'C']) {
+        ws2.mergeCells(`${col}${first}:${col}${rowNo}`)
+      }
+    }
+  }
 
   const buffer = await wb.xlsx.writeBuffer()
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
@@ -141,7 +169,19 @@ function OvertimeExportModal({ roster, onClose }) {
         showToast(`${year}년 ${month}월 승인된 시간외 신청이 없습니다`, 'error')
         return
       }
-      const blob = await buildWorkbook({ year, month, team, rows })
+      // 건별 상세 — 요약과 같은 직급순 인원 순서, 사람 안에서는 날짜순
+      const detail = rows.map((p) => ({
+        team: p.team, name: p.name, role: p.role,
+        items: approved.filter((r) => r.employeeNo === p.employeeNo)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map((r) => {
+            if (!r.end) return { date: dateWithDow(r.date), span: `${r.start} ~ (퇴근 미기록)`, total: '—', night: '—', reason: r.reason }
+            const [s, e] = spanOf(r)
+            const night = nightMinutes(s, e)
+            return { date: dateWithDow(r.date), span: `${r.start} ~ ${r.end}`, total: fmtHM((e - s) / 60), night: night ? fmtHM(night / 60) : '—', reason: r.reason }
+          }),
+      }))
+      const blob = await buildWorkbook({ year, month, team, rows, detail })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

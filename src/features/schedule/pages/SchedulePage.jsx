@@ -7,7 +7,6 @@ import DailyView from '../components/DailyView.jsx'
 import { CODE_CAT, CAT, BADGE, TINT, MONO, codeTime } from '../../../shared/lib/workCodes.js'
 import { fetchMaintRoster } from '../../../shared/lib/maintRoster.js'
 import { fetchDutyAssignments, saveDutyAssignments, fetchMyRosterScopes } from '../../../shared/lib/roster.js'
-import printSchedule from '../lib/printSchedule.js'
 import exportScheduleXlsx from '../lib/exportScheduleXlsx.js'
 import { getTokenClaims } from '../../../shared/lib/api.js'
 import './schedule.css'
@@ -212,6 +211,13 @@ function SchedulePage() {
         <div className="sched-titlewrap">
           <span className="sched-title">{monthTitle}</span>
           <span className="sched-badge">{viewBadge}</span>
+          {/* 월간 현황 엑셀 다운로드 — 월간 뷰에서만 */}
+          {view === 'month' && people && (
+            <span className="sched-tab sched-print" onClick={exportXlsx}>
+              <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
+              엑셀
+            </span>
+          )}
         </div>
         <div className="sched-controls">
           <div className="sched-step">
@@ -331,19 +337,6 @@ function SchedulePage() {
               통계
             </span>
           </div>
-          {/* 월간 현황 인쇄/PDF — 인쇄 다이얼로그에서 프린터 또는 "PDF로 저장" 선택 */}
-          {view === 'month' && people && (
-            <>
-              <span className="sched-tab sched-print" onClick={() => printSchedule({ year, month, teams, roster, cells })}>
-                <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z" /></svg>
-                출력
-              </span>
-              <span className="sched-tab sched-print" onClick={exportXlsx}>
-                <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></svg>
-                엑셀
-              </span>
-            </>
-          )}
         </div>
       </div>
 

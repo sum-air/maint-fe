@@ -1,7 +1,13 @@
 // 월간 스케줄 엑셀(XLSX) 추출 — 인쇄 레이아웃과 같은 문법(팀 밴드·요일 색·주말 틴트·코드 색 글자·범례).
 // exceljs 는 무거워서(약 1MB) 추출 시점에만 로드.
-import { CAT, CODE_GROUPS, TIMES, codeTime } from '../../../shared/lib/workCodes.js'
-import { codeColor } from './printSchedule.js'
+import { CODE_CAT, CAT, PAL, CODE_GROUPS, TIMES, codeTime } from '../../../shared/lib/workCodes.js'
+
+// 히트맵과 같은 문법 — 배경 없이 코드 글자에만 색
+const codeColor = (code) => {
+  const cat = CODE_CAT[code]
+  if (cat === 'off') return '#8A8F9C'
+  return PAL[cat] ? PAL[cat][1] : CAT[cat]?.tx ?? '#3A3A46'
+}
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토']
 const pad = (n) => String(n).padStart(2, '0')

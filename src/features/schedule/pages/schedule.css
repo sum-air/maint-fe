@@ -721,11 +721,12 @@
   font-weight: 600;
 }
 
-/* 월간 스케줄 출력 버튼 — 탭과 같은 문법의 단독 칩 */
+/* 월간 스케줄 엑셀 버튼 — 타이틀 옆 컴팩트 칩 */
 .sched-print {
   background: #fff;
   border: 1px solid #E5E5EC;
-  border-radius: 11px;
-  padding: 10px 16px;
+  border-radius: 10px;
+  padding: 6px 12px;
   flex: none;
+  margin-left: 4px;
 }

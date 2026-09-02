@@ -1,3 +1,5 @@
+import useIsMobile from '../../../shared/hooks/useIsMobile.js'
+import MobileOvertime from '../../../app/mobile/MobileOvertime.jsx'
 import { useEffect, useState } from 'react'
 import MyOvertime from '../components/MyOvertime.jsx'
 import AdminOvertime from '../components/AdminOvertime.jsx'
@@ -43,4 +45,10 @@ function OvertimePage() {
   )
 }
 
-export default OvertimePage
+// 모바일(767px 이하)은 전용 화면으로 — 데스크톱 컴포넌트는 그대로 둔다
+function OvertimePageResponsive() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobileOvertime /> : <OvertimePage />
+}
+
+export default OvertimePageResponsive

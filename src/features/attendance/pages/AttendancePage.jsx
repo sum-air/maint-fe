@@ -1,3 +1,5 @@
+import useIsMobile from '../../../shared/hooks/useIsMobile.js'
+import MobileAttendance from '../../../app/mobile/MobileAttendance.jsx'
 import { useEffect, useState } from 'react'
 import DailyTable from '../components/DailyTable.jsx'
 import PeriodTable from '../components/PeriodTable.jsx'
@@ -292,4 +294,10 @@ function AttendancePage() {
   )
 }
 
-export default AttendancePage
+// 모바일(767px 이하)은 전용 화면으로 — 데스크톱 컴포넌트는 그대로 둔다
+function AttendancePageResponsive() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobileAttendance /> : <AttendancePage />
+}
+
+export default AttendancePageResponsive

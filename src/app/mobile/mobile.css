@@ -1,0 +1,156 @@
+/* ── 모바일 홈 + 탭바 + 시트/모달 (767px 이하 확정 시안) ──
+   글꼴은 767px 이하에서 Noto Sans KR (index.html 에서 로드) */
+
+/* 선택자를 .layout 하위로 한 단계 올림 — vite 의 CSS 주입 순서(index.css 가 뒤)에 좌우되지 않게 */
+@media (max-width: 767px) {
+  html body { font-family: 'Noto Sans KR', -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+  .layout .hd { display: none; }
+  .layout .sb { display: none; }
+  .layout .layout__main { margin-left: 0; padding: 0 0 calc(72px + env(safe-area-inset-bottom)); }
+}
+
+/* 하단 탭바 — 모바일에서만 */
+.mtab { display: none; }
+@media (max-width: 767px) {
+  .mtab {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    display: flex; padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(251, 251, 253, .97); border-top: .5px solid #DCDCE4;
+    backdrop-filter: blur(10px);
+  }
+}
+.mtab__item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 500; color: #9A9AA8; text-decoration: none; letter-spacing: -.2px;
+}
+.mtab__item svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mtab__item.active { color: #5350E2; font-weight: 700; }
+
+/* ── 홈 ── */
+.mhome { background: #F4F4F9; min-height: 100vh; }
+
+.mhero {
+  background: linear-gradient(158deg, #5350E2 8%, #6E63EE 55%, #8A7BF5 100%);
+  color: #fff; border-radius: 0 0 30px 30px;
+  padding: calc(14px + env(safe-area-inset-top)) 24px 22px;
+}
+.mhero__bar { display: flex; align-items: center; }
+.mhero__logo { height: 15px; display: block; filter: brightness(0) invert(1); }
+.mhero__bell {
+  margin-left: auto; width: 33px; height: 33px; border-radius: 50%; border: none;
+  display: grid; place-items: center; background: rgba(255, 255, 255, .14); color: #fff; cursor: pointer;
+}
+.mhero__bell svg { width: 16px; height: 16px; }
+.mhero__date { font-size: 12px; font-weight: 500; color: rgba(255, 255, 255, .68); margin-top: 14px; }
+.mhero__date b { font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.mhero__greet { font-size: 20px; font-weight: 900; letter-spacing: -.5px; margin-top: 3px; }
+.mhero__punchrow { display: flex; justify-content: space-between; margin-top: 16px; font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, .68); }
+.mhero__punchrow b { font-size: 13px; color: #fff; font-variant-numeric: tabular-nums; margin-left: 2px; }
+.mhero__punchrow b.dim { opacity: .55; }
+.mhero__gauge { height: 8px; border-radius: 5px; background: rgba(255, 255, 255, .1); margin-top: 7px; overflow: hidden; }
+.mhero__gauge span { display: block; height: 100%; border-radius: 5px; background: #fff; transition: width .4s ease; }
+.mhero__btn {
+  width: 100%; height: 50px; margin-top: 16px; border: none; border-radius: 999px;
+  background: #fff; color: #5350E2; font-family: inherit; font-size: 15px; font-weight: 900; cursor: pointer;
+}
+.mhero__btn:disabled { background: rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .85); cursor: default; }
+.mhero__net { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 10.5px; font-weight: 700; color: rgba(255, 255, 255, .85); }
+.mhero__net.off { color: #FFD9B3; }
+.mhero__net svg { width: 12px; height: 12px; }
+
+.mbody { padding: 14px 18px 12px; display: flex; flex-direction: column; gap: 13px; }
+
+.mcard { background: #fff; border-radius: 20px; padding: 14px 16px 15px; box-shadow: 0 1px 2px rgba(22, 22, 40, .04), 0 8px 24px rgba(22, 22, 40, .05); }
+.mcard__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 11px; }
+.mcard__head .t { font-size: 14px; font-weight: 900; letter-spacing: -.3px; }
+.mcard__head a { font-size: 11px; font-weight: 700; color: #5350E2; text-decoration: none; }
+
+/* 이번 주 스케줄 — 가로 7칸 */
+.mweek { display: flex; gap: 5px; }
+.mweek__day { flex: 1; border-radius: 12px; background: #F7F7FB; text-align: center; padding: 8px 0 7px; }
+.mweek__day .d { display: block; font-size: 10px; font-weight: 700; color: #ADADBC; }
+.mweek__day .n { display: block; font-size: 13px; font-weight: 900; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.mweek__day .c { display: inline-block; font-size: 9.5px; font-weight: 900; border-radius: 6px; padding: 2px 5px; margin-top: 4px; }
+.mweek__day.today { background: linear-gradient(150deg, #5350E2, #7A6FF0); box-shadow: 0 6px 16px rgba(79, 76, 219, .3); }
+.mweek__day.today .d, .mweek__day.today .n { color: #fff; }
+.mweek__day.today .c { background: rgba(255, 255, 255, .22); color: #fff; }
+
+/* 오늘 업무일지 — 카테고리 뱃지 박스 행 */
+.mlog { display: flex; align-items: center; gap: 10px; background: #F7F7FB; border-radius: 13px; padding: 10px 13px; margin-bottom: 7px; }
+.mlog__cat { font-size: 10px; font-weight: 900; border-radius: 6px; padding: 3px 7px; flex: none; }
+.mlog__txt { font-size: 12.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mlog__time { margin-left: auto; flex: none; font-size: 11px; font-weight: 700; color: #8D8D9C; font-variant-numeric: tabular-nums; }
+.mlog__add {
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border: 1.5px dashed #CDCBEE; border-radius: 13px; padding: 10px; background: transparent;
+  font-family: inherit; font-size: 12px; font-weight: 700; color: #5350E2; cursor: pointer;
+}
+
+/* 작업지시 */
+.mwo { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 12.5px; border-bottom: 1px solid #F2F2F6; }
+.mwo:last-of-type { border-bottom: none; padding-bottom: 3px; }
+.mwo__no { font-weight: 900; font-size: 12px; font-variant-numeric: tabular-nums; }
+.mwo__txt { color: #6B6B78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mwo__st { margin-left: auto; flex: none; font-size: 10px; font-weight: 700; border-radius: 7px; padding: 3px 8px; background: #E6F5EE; color: #1F9D6B; }
+.mwo__st.open { background: #FDF3E3; color: #C97A17; }
+
+.mempty { padding: 14px 0 12px; text-align: center; font-size: 12px; font-weight: 600; color: #B4B7C0; }
+
+/* ── 바텀 시트 + 모달 ── */
+.msheet-overlay {
+  position: fixed; inset: 0; z-index: 90; background: rgba(18, 16, 40, .44);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.msheet {
+  width: 100%; max-height: 82vh; overflow-y: auto; background: #fff;
+  border-radius: 24px 24px 0 0; padding: 13px 22px calc(26px + env(safe-area-inset-bottom));
+  box-shadow: 0 -14px 40px rgba(20, 15, 80, .2);
+}
+.msheet__grab { width: 40px; height: 4.5px; border-radius: 3px; background: #E2E2EA; margin: 0 auto 12px; }
+.msheet__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.msheet__title { font-size: 16px; font-weight: 900; letter-spacing: -.3px; }
+.msheet__sub { font-size: 11px; font-weight: 500; color: #ADADBC; }
+.msheet__groups { display: flex; flex-direction: column; gap: 12px; }
+.msheet__glabel { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.msheet__glabel i { width: 7px; height: 7px; border-radius: 50%; }
+.msheet__chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.msheet__chip {
+  border: none; border-radius: 9px; padding: 8px 13px; font-family: inherit;
+  font-size: 11.5px; font-weight: 700; cursor: pointer;
+}
+
+.mmodal {
+  width: calc(100% - 48px); max-width: 360px; margin: auto; align-self: center;
+  background: #fff; border-radius: 22px; padding: 20px 20px 18px;
+  box-shadow: 0 24px 60px rgba(20, 15, 80, .28);
+}
+.mmodal__head { display: flex; align-items: baseline; justify-content: space-between; }
+.mmodal__title { font-size: 16px; font-weight: 900; letter-spacing: -.3px; }
+.mmodal__sub { font-size: 11px; font-weight: 500; color: #ADADBC; }
+.mmodal__times { display: flex; align-items: center; gap: 9px; margin-top: 15px; }
+.mmodal__tbox {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border: none; background: #F7F7FB; border-radius: 12px; padding: 9px 0; font-family: inherit; cursor: pointer;
+}
+.mmodal__tbox .k { font-size: 10px; font-weight: 700; color: #ADADBC; }
+.mmodal__tbox .v { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; color: #16161E; }
+.mmodal__arrow { color: #C9C9D4; font-weight: 700; }
+.mmodal__catrow {
+  width: 100%; display: flex; align-items: center; gap: 8px; margin-top: 11px;
+  border: 1.5px solid #E9E9F0; border-radius: 12px; padding: 10px 13px; background: #fff;
+  font-family: inherit; cursor: pointer;
+}
+.mmodal__catchip { font-size: 10px; font-weight: 900; border-radius: 6px; padding: 3px 7px; }
+.mmodal__catname { font-size: 12px; font-weight: 700; color: #3A3A48; }
+.mmodal__catgo { margin-left: auto; font-size: 11px; font-weight: 700; color: #5350E2; }
+.mmodal__inp {
+  width: 100%; margin-top: 11px; border: 1.5px solid #E9E9F0; border-radius: 12px;
+  padding: 10px 13px; font-family: inherit; font-size: 12.5px; outline: none;
+}
+.mmodal__inp:focus { border-color: #C7C5FF; }
+.mmodal__btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+.mbtn { border: none; border-radius: 10px; font-family: inherit; font-weight: 700; font-size: 13px; padding: 9px 18px; cursor: pointer; }
+.mbtn--ghost { background: #F1F1F5; color: #55555F; }
+.mbtn--main { background: #5350E2; color: #fff; font-weight: 900; }
+.mbtn--main:disabled { background: #EEEEF2; color: #B4B7C0; cursor: not-allowed; }

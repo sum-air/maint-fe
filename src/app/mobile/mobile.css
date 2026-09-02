@@ -116,6 +116,86 @@
 
 .mempty { padding: 14px 0 12px; text-align: center; font-size: 12px; font-weight: 600; color: #B4B7C0; }
 
+/* ── 서브 페이지 공용 (업무일지·스케줄·시간외·근무) ── */
+.mpg {
+  background: linear-gradient(158deg, #5350E2 8%, #6E63EE 55%, #8A7BF5 100%);
+  color: #fff; border-radius: 0 0 26px 26px;
+  padding: calc(14px + env(safe-area-inset-top)) 24px 16px;
+}
+.mpg__logo { height: 14px; display: block; filter: brightness(0) invert(1); }
+.mpg__row { display: flex; align-items: baseline; margin-top: 10px; }
+.mpg__title { font-size: 19px; font-weight: 900; letter-spacing: -.4px; }
+.mpg__right { margin-left: auto; }
+.mstep { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: rgba(255, 255, 255, .9); }
+.mstep button { border: none; background: transparent; color: rgba(255, 255, 255, .65); font-family: inherit; font-size: 17px; font-weight: 900; padding: 2px 6px; cursor: pointer; }
+.mstep__label { font-variant-numeric: tabular-nums; }
+.mcard__sub { font-size: 11px; font-weight: 700; color: #ADADBC; }
+
+/* 플로팅 추가 버튼 */
+.mfab {
+  position: fixed; right: 20px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 55;
+  width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+  background: linear-gradient(140deg, #5350E2, #7A6FF0); color: #fff;
+  font-size: 24px; font-weight: 700; font-family: inherit;
+  box-shadow: 0 10px 24px rgba(79, 76, 219, .4); display: grid; place-items: center;
+}
+
+/* 업무일지 — 타임라인 */
+.mtl { position: relative; padding-left: 20px; }
+.mtl::before { content: ''; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: #ECEAFB; }
+.mtl__item { position: relative; padding: 7px 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mtl__item::before { content: ''; position: absolute; left: -19px; top: 14px; width: 9px; height: 9px; border-radius: 50%; background: #5350E2; box-shadow: 0 0 0 3px #EFEEFE; }
+.mtl__time { font-size: 11.5px; font-weight: 900; color: #5350E2; font-variant-numeric: tabular-nums; }
+.mtl__txt { font-size: 12.5px; font-weight: 500; }
+.mtl .mempty { padding-left: 0; }
+
+/* 업무일지 — To-do / 메모 */
+.mtodo { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 2px; border: none; background: transparent; font-family: inherit; text-align: left; cursor: pointer; }
+.mtodo__box { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid #D8D8E2; display: grid; place-items: center; font-size: 11px; color: #fff; flex: none; }
+.mtodo__box.on { background: #5350E2; border-color: #5350E2; }
+.mtodo__txt { font-size: 12.5px; font-weight: 500; }
+.mtodo__txt.done { text-decoration: line-through; color: #ADADBC; }
+.mtodo__inp { width: 100%; margin-top: 6px; border: 1.5px dashed #E0E0EA; border-radius: 11px; padding: 9px 12px; font-family: inherit; font-size: 12px; outline: none; }
+.mmemo { width: 100%; min-height: 84px; border: none; background: #F7F7FB; border-radius: 12px; padding: 10px 13px; font-family: inherit; font-size: 12.5px; line-height: 1.6; resize: vertical; outline: none; }
+
+/* 스케줄 — 월 달력 */
+.mcal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.mcal__h { text-align: center; font-size: 10px; font-weight: 700; color: #ADADBC; padding: 3px 0; }
+.mcal__cell { border-radius: 9px; background: #F7F7FB; text-align: center; padding: 5px 0 4px; }
+.mcal__cell .n { display: block; font-size: 11px; font-weight: 700; color: #55555F; font-variant-numeric: tabular-nums; }
+.mcal__cell .c { display: block; font-size: 9px; font-weight: 900; margin-top: 1px; min-height: 12px; }
+.mcal__cell.today { background: linear-gradient(150deg, #5350E2, #7A6FF0); }
+.mcal__cell.today .n, .mcal__cell.today .c { color: #fff !important; }
+
+/* 공용 행 (팀 근무·출퇴근 기록) */
+.mrow { display: flex; align-items: center; gap: 9px; padding: 9px 2px; border-bottom: 1px solid #F2F2F6; font-size: 12.5px; }
+.mrow:last-of-type { border-bottom: none; }
+.mrow__name { font-weight: 900; }
+.mrow__role { font-size: 10.5px; color: #ADADBC; font-weight: 600; }
+
+/* 시간외 */
+.msum { display: flex; gap: 9px; }
+.msum__tile { flex: 1; padding: 12px 14px; }
+.msum__tile .k { display: block; font-size: 10.5px; font-weight: 700; color: #ADADBC; }
+.msum__tile .v { display: block; font-size: 18px; font-weight: 900; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.mot { display: flex; align-items: center; gap: 9px; padding: 9px 2px; border-bottom: 1px solid #F2F2F6; }
+.mot:last-of-type { border-bottom: none; }
+.mot__info { flex: 1; min-width: 0; }
+.mot__info .d { display: block; font-size: 12px; font-weight: 900; }
+.mot__info .tmono { display: block; font-size: 10.5px; font-weight: 700; color: #8D8D9C; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.mot__info .rsn { display: block; font-size: 11px; color: #55555F; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mot__btns { display: inline-flex; gap: 6px; flex: none; }
+.mot__cancel { flex: none; border: none; background: transparent; font-family: inherit; font-size: 11px; font-weight: 700; color: #ADADBC; text-decoration: underline; cursor: pointer; }
+
+/* 출퇴근 기록 */
+.matt__day { width: 76px; flex: none; }
+.matt__day .d { display: block; font-size: 12px; font-weight: 900; }
+.matt__day .mlog__cat { margin-top: 3px; display: inline-flex; }
+.matt__time { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.matt__time i { font-style: normal; color: #C9C9D4; }
+.matt__dur { margin-left: auto; flex: none; font-size: 11px; font-weight: 900; color: #3A3A48; font-variant-numeric: tabular-nums; }
+.matt__dur.ing { color: #C97A17; }
+
 /* ── 바텀 시트 + 모달 ── */
 .msheet-overlay {
   position: fixed; inset: 0; z-index: 90; background: rgba(18, 16, 40, .44);

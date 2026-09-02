@@ -1,3 +1,5 @@
+import useIsMobile from '../../../shared/hooks/useIsMobile.js'
+import MobileSchedule from '../../../app/mobile/MobileSchedule.jsx'
 import { useEffect, useState } from 'react'
 import MonthHeatmap from '../components/MonthHeatmap.jsx'
 import ShiftEditModal from '../components/ShiftEditModal.jsx'
@@ -446,4 +448,10 @@ function SchedulePage() {
   )
 }
 
-export default SchedulePage
+// 모바일(767px 이하)은 전용 화면으로 — 데스크톱 컴포넌트는 그대로 둔다
+function SchedulePageResponsive() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobileSchedule /> : <SchedulePage />
+}
+
+export default SchedulePageResponsive

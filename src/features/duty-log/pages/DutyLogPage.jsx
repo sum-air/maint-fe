@@ -1,3 +1,5 @@
+import useIsMobile from '../../../shared/hooks/useIsMobile.js'
+import MobileDutyLog from '../../../app/mobile/MobileDutyLog.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MONO, CAT, CODE_CAT, TIMES } from '../../../shared/lib/workCodes.js'
 import { CURRENT_USER } from '../../../shared/lib/currentUser.js'
@@ -541,4 +543,10 @@ function DutyLogPage() {
   )
 }
 
-export default DutyLogPage
+// 모바일(767px 이하)은 전용 화면으로 — 데스크톱 컴포넌트는 그대로 둔다
+function DutyLogPageResponsive() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobileDutyLog /> : <DutyLogPage />
+}
+
+export default DutyLogPageResponsive

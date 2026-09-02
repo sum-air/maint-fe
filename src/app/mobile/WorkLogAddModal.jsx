@@ -7,7 +7,9 @@ import { showToast } from '../../shared/lib/toast.js'
 import '../../features/duty-log/pages/duty-log.css' // TimeModal 의 dl-tchip/dl-nowlink 스타일
 
 // 일지 추가 모달 (시안 B 확정) — 시간 박스 2개 · 카테고리 행([변경]→시트) · 내용 · [닫기·추가]
-function WorkLogAddModal({ onSaved, onClose }) {
+// dateKey: "MM.DD" (기본 오늘) — 업무일지 화면에서 과거 날짜에 쓸 때 넘긴다
+function WorkLogAddModal({ dateKey, onSaved, onClose }) {
+  const key = dateKey ?? todayKey()
   const [start, setStart] = useState(nowHM())
   const [end, setEnd] = useState(nowHM())
   const [cat, setCat] = useState(null) // { gi, c }
@@ -23,7 +25,7 @@ function WorkLogAddModal({ onSaved, onClose }) {
   const save = () => {
     if (!canAdd || busy) return
     setBusy(true)
-    createWorkLog({ key: todayKey(), start, end: end === start ? '' : end, gi: cat.gi, c: cat.c, t: content.trim() })
+    createWorkLog({ key, start, end: end === start ? '' : end, gi: cat.gi, c: cat.c, t: content.trim() })
       .then((entry) => {
         showToast('일지가 추가되었습니다')
         onSaved(entry)
@@ -39,7 +41,7 @@ function WorkLogAddModal({ onSaved, onClose }) {
         <div className="mmodal" onClick={(e) => e.stopPropagation()}>
           <div className="mmodal__head">
             <span className="mmodal__title">일지 추가</span>
-            <span className="mmodal__sub">{fmtDate(todayKey())}</span>
+            <span className="mmodal__sub">{fmtDate(key)}</span>
           </div>
           <div className="mmodal__times">
             <button type="button" className="mmodal__tbox" onClick={() => setTimeOpen('start')}>

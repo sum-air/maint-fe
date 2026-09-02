@@ -196,6 +196,48 @@
 .matt__dur { margin-left: auto; flex: none; font-size: 11px; font-weight: 900; color: #3A3A48; font-variant-numeric: tabular-nums; }
 .matt__dur.ing { color: #C97A17; }
 
+/* ── 실시간 운항 (웹 티켓 문법) ── */
+.mfotabs { display: flex; gap: 7px; }
+.mfotab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 0;
+  border-radius: 13px; background: #fff; border: 1.5px solid #E9E9F0; cursor: pointer;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 800; color: #6E6E80;
+}
+.mfotab.on { background: #ECECFF; border-color: #C7C5FF; color: #5350E2; }
+.mfotab .cnt { font-size: 10.5px; font-weight: 800; background: #F1F1F4; color: #8A8A98; border-radius: 7px; padding: 2px 7px; }
+.mfotab.on .cnt { background: #fff; color: #5350E2; }
+/* 한 장의 카드 안에 편들이 구분선으로 이어진다 */
+.mfocard { background: #fff; border-radius: 18px; padding: 4px 14px; box-shadow: 0 1px 2px rgba(22,22,40,.04), 0 8px 24px rgba(22,22,40,.05); }
+.mfo { padding: 12px 0; border-bottom: 1px solid #F2F2F6; }
+.mfo:last-child { border-bottom: none; }
+.mfo.now { background: #F4F3FF; border-radius: 13px; border-bottom: none; padding: 12px 12px; margin: 8px -6px; }
+.mfo__top { display: flex; align-items: center; gap: 8px; }
+.mfo__no { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; font-weight: 800; }
+.mfo__pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 900; border-radius: 999px; padding: 4px 10px; flex: none; }
+.mfo__pill i { width: 5px; height: 5px; border-radius: 50%; }
+.mfo__pill.dla { color: #C97A17; background: #FBEFD9; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; }
+.mfo__stats { margin-left: auto; display: inline-flex; align-items: baseline; gap: 10px; flex: none; }
+.mfo__stat { display: inline-flex; align-items: baseline; gap: 4px; }
+.mfo__stat .lb { font-size: 9px; font-weight: 800; color: #B6B6C2; letter-spacing: .4px; }
+.mfo__stat .v { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 700; color: #4E4E5E; }
+.mfo__stat .v small { font-size: 9px; color: #9A9AA8; font-family: inherit; }
+.mfo__leg { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+.mfo__apt { width: 84px; text-align: center; flex: none; }
+.mfo__apt .nm { display: block; font-size: 11px; font-weight: 700; color: #6E6E80; }
+.mfo__apt .cd { display: block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 21px; font-weight: 800; letter-spacing: -.5px; line-height: 1.15; }
+.mfo__apt .tr { display: block; font-size: 9.5px; font-weight: 800; color: #B6B6C2; letter-spacing: .3px; margin-top: 3px; }
+.mfo__apt .tr b { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; font-weight: 700; color: #4E4E5E; margin-left: 2px; }
+.mfo__track { flex: 1; position: relative; height: 34px; }
+.mfo__track .rail { position: absolute; left: 0; right: 0; top: 21px; height: 3px; border-radius: 2px; background: #E4E4EE; }
+.mfo__track .bar { position: absolute; left: 0; top: 21px; height: 3px; border-radius: 2px; background: #5350E2; }
+.mfo__track .lbl { position: absolute; top: 0; transform: translateX(-50%); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; color: #5350E2; white-space: nowrap; }
+.mfo__track .plane { position: absolute; top: 13px; transform: translateX(-50%); width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(40,35,140,.28); display: grid; place-items: center; }
+.mfo__track .plane svg { width: 12px; height: 12px; }
+.mfo__si { display: flex; align-items: center; gap: 7px; margin-top: 10px; background: #F7F7FB; border-radius: 10px; padding: 7px 10px; }
+.mfo__si .bdg { font-size: 9px; font-weight: 900; background: #E4E2F8; color: #4A3FB0; border-radius: 5px; padding: 2px 6px; flex: none; }
+.mfo__si .tx { font-size: 10.5px; font-weight: 500; color: #6B6B78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mfo__si .dl { margin-left: auto; flex: none; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; color: #C97A17; }
+
 /* ── 바텀 시트 + 모달 ── */
 .msheet-overlay {
   position: fixed; inset: 0; z-index: 90; background: rgba(18, 16, 40, .44);

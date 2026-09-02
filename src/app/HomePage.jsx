@@ -9,6 +9,8 @@ import { lateCheckoutSuggestion } from '../shared/lib/overtime.js'
 import OvertimeAfterModal from '../features/attendance/components/OvertimeAfterModal.jsx'
 import { CAT_GROUPS } from '../features/duty-log/utils.js'
 import { showToast } from '../shared/lib/toast.js'
+import useIsMobile from '../shared/hooks/useIsMobile.js'
+import MobileHome from './mobile/MobileHome.jsx'
 
 const pad = (n) => String(n).padStart(2, '0')
 
@@ -245,6 +247,7 @@ function WorkCard() {
 const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 function HomePage() {
+  const isMobile = useIsMobile()
   // 내 이번 달 근무 배정 — 실패 시 빈 캘린더 (닫히는 쪽으로 동작)
   const [duties, setDuties] = useState({})
   useEffect(() => {
@@ -296,6 +299,9 @@ function HomePage() {
       setBusy(false)
     }
   }
+
+  // 모바일 — 확정 시안 전용 화면 (데이터 훅은 자체 보유)
+  if (isMobile) return <MobileHome />
 
   return (
     <section

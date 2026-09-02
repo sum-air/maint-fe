@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router'
 import { CURRENT_USER as USER, applyMe } from '../lib/currentUser.js'
 import { fetchMe } from '../lib/employees.js'
 import { logout } from '../lib/auth.js'
+import TabBar from './TabBar.jsx'
 
 // 공통 틀: 상단 헤더(로고 + 브레드크럼 + 사용자 영역) + 왼쪽 사이드바(메뉴) + 콘텐츠.
 // 사이드바는 평소 아이콘만(76px), 마우스를 올리면 펼쳐진다(216px).
@@ -200,6 +201,7 @@ function Layout() {
       <main className="layout__main">
         <Outlet /> {/* URL 에 해당하는 페이지가 이 자리에 렌더링된다 */}
       </main>
+      <TabBar /> {/* 모바일(767px 이하)에서만 표시 — mobile.css */}
     </div>
   )
 }

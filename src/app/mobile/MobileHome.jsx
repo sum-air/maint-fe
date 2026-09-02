@@ -7,6 +7,8 @@ import { fetchMyWorkSessions, checkIn, checkOut, kstHM, fetchNetworkStatus } fro
 import { fetchWorkLogs, fetchWorkOrders } from '../../shared/lib/worklog.js'
 import { lateCheckoutSuggestion } from '../../shared/lib/overtime.js'
 import { CAT_GROUPS } from '../../features/duty-log/utils.js'
+import { fetchFlights } from '../../features/flight-ops/api.js'
+import { mapFlights, FLT_ST, APT, todayKst, kstDateOf } from '../../features/flight-ops/utils.js'
 import OvertimeAfterModal from '../../features/attendance/components/OvertimeAfterModal.jsx'
 import WorkLogAddModal from './WorkLogAddModal.jsx'
 import { showToast } from '../../shared/lib/toast.js'
@@ -35,7 +37,22 @@ const WifiIcon = () => (
   </svg>
 )
 
-// 모바일 홈 — 확정 시안: 보라 헤더(진행 게이지) + 가로 7칸 스케줄 + 카테고리 뱃지 일지 + 작업지시
+// "YYYY-MM-DD" ± n일 (운항 조회용 — 운항일 키가 GMT 라 KST 하루는 GMT 이틀에 걸친다)
+const shiftDate = (d, delta) => {
+  const t = new Date(`${d}T00:00:00Z`)
+  t.setUTCDate(t.getUTCDate() + delta)
+  return t.toISOString().slice(0, 10)
+}
+
+// 기체별로 "지금 보여줄 편" 하나 — 운항중 > 다음 예정/지연 > 마지막 편
+const pickLeg = (legs) => {
+  const cur = legs.find((l) => l.st === '운항중')
+  if (cur) return cur
+  const next = legs.find((l) => l.st === '예정' || l.st === '지연')
+  return next ?? legs[legs.length - 1]
+}
+
+// 모바일 홈 — 확정 시안: 보라 헤더(진행 게이지) + 실시간 운항 + 가로 7칸 스케줄 + 카테고리 뱃지 일지 + 작업지시
 function MobileHome() {
   const now = new Date()
 
@@ -88,6 +105,25 @@ function MobileHome() {
       .catch(() => {})
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 실시간 운항 — 오늘(KST) 편들. 운항일 키가 GMT 라 이틀치를 받아 KST 로 거른다. 60초마다 갱신.
+  const [fleet, setFleet] = useState({})
+  useEffect(() => {
+    let alive = true
+    const load = () => {
+      const date = todayKst()
+      Promise.all([fetchFlights(shiftDate(date, -1)), fetchFlights(date)])
+        .then(([prev, cur]) => {
+          if (!alive) return
+          const rows = [...(prev ?? []), ...(cur ?? [])].filter((f) => kstDateOf(f.scheduledDepartureUtc) === date)
+          setFleet(mapFlights(rows))
+        })
+        .catch(() => {})
+    }
+    load()
+    const timer = setInterval(load, 60000)
+    return () => { alive = false; clearInterval(timer) }
   }, [])
 
   // 작업지시 — 최근 3건
@@ -177,6 +213,35 @@ function MobileHome() {
       </div>
 
       <div className="mbody">
+        {/* 실시간 운항 — 기체별 현재/다음 편 */}
+        <div className="mcard">
+          <div className="mcard__head">
+            <span className="t">실시간 운항</span>
+            <Link to="/flight-ops">전체 →</Link>
+          </div>
+          {Object.entries(fleet).map(([reg, legs]) => {
+            const l = pickLeg(legs)
+            const stc = FLT_ST[l.st] ?? FLT_ST['예정']
+            return (
+              <div key={reg} className="mflt">
+                <div className="mflt__row">
+                  <span className="mflt__reg">{reg}</span>
+                  <span className="mflt__no">{l.fno}</span>
+                  <span className="mflt__dir">{APT[l.dir[0]]?.code ?? l.dir[0]} → {APT[l.dir[1]]?.code ?? l.dir[1]}</span>
+                  <span className="mflt__time">
+                    {l.st === '운항중' && l.eta ? `도착 예정 ${l.eta}` : l.st === '도착' ? `${l.ad || l.std} → ${l.aa}` : `${l.std} → ${l.sta}`}
+                  </span>
+                  <span className="mflt__st" style={{ background: stc.b, color: stc.c }}>{l.st}</span>
+                </div>
+                {l.pct != null && (
+                  <div className="mflt__bar"><span style={{ width: `${l.pct}%` }} /></div>
+                )}
+              </div>
+            )
+          })}
+          {Object.keys(fleet).length === 0 && <div className="mempty">오늘 운항 편이 없습니다</div>}
+        </div>
+
         {/* 이번 주 스케줄 — 가로 7칸 */}
         <div className="mcard">
           <div className="mcard__head">

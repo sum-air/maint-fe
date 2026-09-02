@@ -139,16 +139,16 @@ function MobileFlightOps() {
           <div className="mempty" style={{ padding: '40px 0' }}>이 운항일에 편이 없습니다</div>
         ) : (
           <>
-            <div className="mfotabs">
-              {aircraft.map((r) => (
-                <button key={r} type="button" className={reg === r ? 'mfotab on' : 'mfotab'} onClick={() => setRegSel(r)}>
-                  {r}
-                  <span className="cnt">{fleet[r].length}</span>
-                </button>
-              ))}
-            </div>
-            {/* 한 카드 안에 편들이 구분선으로 이어진다 — 웹 fo-card 문법 */}
+            {/* 필터 탭 + 편 전부가 한 장의 카드 — 구분선 없이 연회색 블록으로만 구분 */}
             <div className="mfocard">
+              <div className="mfotabs">
+                {aircraft.map((r) => (
+                  <button key={r} type="button" className={reg === r ? 'mfotab on' : 'mfotab'} onClick={() => setRegSel(r)}>
+                    {r}
+                    <span className="cnt">{fleet[r].length}</span>
+                  </button>
+                ))}
+              </div>
               {legs.map((l) => <Ticket key={l.fno} leg={l} />)}
             </div>
           </>

@@ -197,20 +197,19 @@
 .matt__dur.ing { color: #C97A17; }
 
 /* ── 실시간 운항 (웹 티켓 문법) ── */
-.mfotabs { display: flex; gap: 7px; }
+/* 필터 탭 + 편 전부가 한 장의 카드 — 탭은 세그먼트 컨트롤, 편은 연회색 블록(구분선 없음) */
+.mfocard { background: #fff; border-radius: 18px; padding: 12px; box-shadow: 0 1px 2px rgba(22,22,40,.04), 0 8px 24px rgba(22,22,40,.05); display: flex; flex-direction: column; gap: 8px; }
+.mfotabs { display: flex; gap: 4px; background: #F1F1F5; border-radius: 12px; padding: 4px; }
 .mfotab {
-  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 0;
-  border-radius: 13px; background: #fff; border: 1.5px solid #E9E9F0; cursor: pointer;
-  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; font-weight: 800; color: #6E6E80;
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 0;
+  border-radius: 9px; background: transparent; border: none; cursor: pointer;
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; font-weight: 800; color: #8A8A98;
 }
-.mfotab.on { background: #ECECFF; border-color: #C7C5FF; color: #5350E2; }
-.mfotab .cnt { font-size: 10.5px; font-weight: 800; background: #F1F1F4; color: #8A8A98; border-radius: 7px; padding: 2px 7px; }
-.mfotab.on .cnt { background: #fff; color: #5350E2; }
-/* 한 장의 카드 안에 편들이 구분선으로 이어진다 */
-.mfocard { background: #fff; border-radius: 18px; padding: 4px 14px; box-shadow: 0 1px 2px rgba(22,22,40,.04), 0 8px 24px rgba(22,22,40,.05); }
-.mfo { padding: 12px 0; border-bottom: 1px solid #F2F2F6; }
-.mfo:last-child { border-bottom: none; }
-.mfo.now { background: #F4F3FF; border-radius: 13px; border-bottom: none; padding: 12px 12px; margin: 8px -6px; }
+.mfotab.on { background: #fff; color: #5350E2; box-shadow: 0 2px 8px rgba(22,22,40,.1); }
+.mfotab .cnt { font-size: 10px; font-weight: 800; background: #E4E4EA; color: #8A8A98; border-radius: 7px; padding: 1px 6px; }
+.mfotab.on .cnt { background: #ECECFF; color: #5350E2; }
+.mfo { background: #F7F7FB; border-radius: 14px; padding: 11px 13px; }
+.mfo.now { background: #F4F3FF; box-shadow: inset 0 0 0 1.5px #C7C5FF; }
 .mfo__top { display: flex; align-items: center; gap: 8px; }
 .mfo__no { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 14px; font-weight: 800; }
 .mfo__pill { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 900; border-radius: 999px; padding: 4px 10px; flex: none; }
@@ -233,7 +232,7 @@
 .mfo__track .lbl { position: absolute; top: 0; transform: translateX(-50%); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9px; font-weight: 800; color: #5350E2; white-space: nowrap; }
 .mfo__track .plane { position: absolute; top: 13px; transform: translateX(-50%); width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(40,35,140,.28); display: grid; place-items: center; }
 .mfo__track .plane svg { width: 12px; height: 12px; }
-.mfo__si { display: flex; align-items: center; gap: 7px; margin-top: 10px; background: #F7F7FB; border-radius: 10px; padding: 7px 10px; }
+.mfo__si { display: flex; align-items: center; gap: 7px; margin-top: 10px; background: #fff; border-radius: 10px; padding: 7px 10px; }
 .mfo__si .bdg { font-size: 9px; font-weight: 900; background: #E4E2F8; color: #4A3FB0; border-radius: 5px; padding: 2px 6px; flex: none; }
 .mfo__si .tx { font-size: 10.5px; font-weight: 500; color: #6B6B78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mfo__si .dl { margin-left: auto; flex: none; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 800; color: #C97A17; }

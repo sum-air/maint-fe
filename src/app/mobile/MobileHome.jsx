@@ -222,20 +222,36 @@ function MobileHome() {
           {Object.entries(fleet).map(([reg, legs]) => {
             const l = pickLeg(legs)
             const stc = FLT_ST[l.st] ?? FLT_ST['예정']
+            // 진행률 — 도착 100, 운항중은 계산값, 그 외(예정/지연/결항) 0
+            const pct = l.st === '도착' ? 100 : l.st === '운항중' ? (l.pct ?? 50) : 0
+            const depT = l.ad || l.std
+            const arrT = l.st === '운항중' ? (l.eta || l.sta) : l.aa || l.sta
             return (
               <div key={reg} className="mflt">
                 <div className="mflt__row">
                   <span className="mflt__reg">{reg}</span>
                   <span className="mflt__no">{l.fno}</span>
-                  <span className="mflt__dir">{APT[l.dir[0]]?.code ?? l.dir[0]} → {APT[l.dir[1]]?.code ?? l.dir[1]}</span>
-                  <span className="mflt__time">
-                    {l.st === '운항중' && l.eta ? `도착 예정 ${l.eta}` : l.st === '도착' ? `${l.ad || l.std} → ${l.aa}` : `${l.std} → ${l.sta}`}
-                  </span>
                   <span className="mflt__st" style={{ background: stc.b, color: stc.c }}>{l.st}</span>
                 </div>
-                {l.pct != null && (
-                  <div className="mflt__bar"><span style={{ width: `${l.pct}%` }} /></div>
-                )}
+                <div className="mflt__route">
+                  <span className="mflt__apt">
+                    <span className="code">{APT[l.dir[0]]?.code ?? l.dir[0]}</span>
+                    <span className="tm">{depT} 출발{l.ad ? '' : ' 예정'}</span>
+                  </span>
+                  <span className="mflt__track">
+                    <span className="rail" />
+                    <span className="fill" style={{ width: `${pct}%` }} />
+                    <span className="badge" style={{ left: `${Math.min(94, Math.max(6, pct))}%` }}>
+                      <svg viewBox="0 0 24 24" style={{ transform: 'rotate(90deg)' }}>
+                        <path fill="#5350E2" d="M21.5 15.5v-2l-8-5V3c0-.83-.67-1.5-1.5-1.5S10.5 2.17 10.5 3v5.5l-8 5v2l8-2.5v5.5l-2 1.5V21l3.5-1 3.5 1v-1.5l-2-1.5v-5.5l8 2.5z" />
+                      </svg>
+                    </span>
+                  </span>
+                  <span className="mflt__apt">
+                    <span className="code" style={l.st === '도착' ? undefined : { color: '#8D8D9C' }}>{APT[l.dir[1]]?.code ?? l.dir[1]}</span>
+                    <span className="tm" style={l.st === '도착' ? undefined : { color: '#5350E2' }}>{arrT} 도착{l.aa ? '' : ' 예정'}</span>
+                  </span>
+                </div>
               </div>
             )
           })}

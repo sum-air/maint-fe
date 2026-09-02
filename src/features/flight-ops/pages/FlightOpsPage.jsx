@@ -1,3 +1,5 @@
+import useIsMobile from '../../../shared/hooks/useIsMobile.js'
+import MobileFlightOps from '../../../app/mobile/MobileFlightOps.jsx'
 import { useEffect, useState } from 'react'
 import { MONO } from '../../../shared/lib/workCodes.js'
 import { hoursBetween } from '../../../shared/lib/timeInput.js'
@@ -275,4 +277,10 @@ function FlightOpsPage() {
   )
 }
 
-export default FlightOpsPage
+// 모바일(767px 이하)은 전용 화면으로 — 데스크톱 컴포넌트는 그대로 둔다
+function FlightOpsPageResponsive() {
+  const isMobile = useIsMobile()
+  return isMobile ? <MobileFlightOps /> : <FlightOpsPage />
+}
+
+export default FlightOpsPageResponsive
